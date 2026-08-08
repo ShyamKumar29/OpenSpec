@@ -1,6 +1,36 @@
 import { NextRequest } from "next/server";
 import { getStore } from "@/mocks/fixtures/store";
 import { jsonResponse, paginate, simulateLatency } from "@/mocks/server/respond";
+import type { RecordSummaryWire } from "@/lib/contracts/record";
+
+/** `sort` is additive within this endpoint, not a new route (D2 governs routes; see the
+ *  precedent note on `RecordSummary` in lib/contracts/record.ts, and
+ *  lib/catalog/filters.ts). `-field` sorts descending. */
+const SORT_ACCESSORS: Record<string, (r: RecordSummaryWire) => number | string> = {
+  mpn_raw: (r) => r.mpn_raw,
+  completeness: (r) =>
+    r.completeness.mandatory_total === 0
+      ? 0
+      : r.completeness.filled / r.completeness.mandatory_total,
+  unknown_count: (r) => r.unknown_count,
+  tier0_pending_count: (r) => r.tier0_pending_count,
+};
+
+function applySort(items: RecordSummaryWire[], sort: string | null): RecordSummaryWire[] {
+  if (!sort) return items;
+  const desc = sort.startsWith("-");
+  const field = desc ? sort.slice(1) : sort;
+  const accessor = SORT_ACCESSORS[field];
+  if (!accessor) return items;
+  const sorted = [...items].sort((a, b) => {
+    const av = accessor(a);
+    const bv = accessor(b);
+    if (av < bv) return -1;
+    if (av > bv) return 1;
+    return 0;
+  });
+  return desc ? sorted.reverse() : sorted;
+}
 
 /** `GET /records` — docs/api.md §Records. Filters: class_id, status, completeness_lt,
  *  supplier, q, has_unknown_reason. */
@@ -45,6 +75,8 @@ export async function GET(request: NextRequest) {
   if (params.get("has_unknown_reason") === "true") {
     items = items.filter((r) => r.unknown_count > 0);
   }
+
+  items = applySort(items, params.get("sort"));
 
   return jsonResponse(request, paginate(items, request));
 }

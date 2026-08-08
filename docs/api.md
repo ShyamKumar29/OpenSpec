@@ -42,7 +42,7 @@
 | `POST` | `/records/import` | Multipart CSV/XLSX upload + column mapping → `202` + `batch_id` |
 | `GET` | `/records/import/{batch_id}` | Batch status, row counts, error report link |
 | `POST` | `/records` | Create records (JSON batch) → `202` + `run_id` |
-| `GET` | `/records` | List. Filters: `class_id`, `status`, `completeness_lt`, `supplier`, `q`, `has_unknown_reason` |
+| `GET` | `/records` | List. Filters: `class_id`, `status`, `completeness_lt`, `supplier`, `q`, `has_unknown_reason`. Sort: `sort=<field>` / `-<field>` for descending, `field ∈ {mpn_raw, completeness, unknown_count, tier0_pending_count}` (adopted in `frontend-f1`, additive — same route, no contract break) |
 | `GET` | `/records/{id}` | Full record: class, completeness, bindings, current attribute values |
 | `POST` | `/records/{id}/enrich` | Re-run the pipeline → `202` + `run_id`. Body: `{ from_stage?, force? }` |
 | `PATCH` | `/records/{id}/class` | Manual reclassification (writes `HUMAN` provenance) |

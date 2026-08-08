@@ -291,7 +291,79 @@ export function generateAttributeValues(
   }
 
   ensureAllUnknownReasonsCovered(rng, out);
+  injectSupersessionChains(rng, out);
   return out;
+}
+
+/** Extracted-then-human-corrected chains: at least three `SUPERSEDED` -> `HUMAN`
+ *  pairs (docs/14-frontend-implementation-plan.md §4.2: "SUPERSEDED (with a visible
+ *  supersession chain on at least three values)"). Previously documented but never
+ *  generated — this closes that gap.
+ *
+ *  The "new" (current) value keeps its existing id and its position in `values`, so
+ *  every other generator that already indexed it by id or by record (review-tasks,
+ *  store.ts's `attrsByRecord`) sees no change beyond its own fields. The "old"
+ *  (superseded) value is appended as an independently addressable entry with a new id,
+ *  so `/attributes/{id}/explain` and `/attributes/{id}/history` can resolve it —
+ *  exactly like every other attribute value, just with `status: "SUPERSEDED"`. It is
+ *  deliberately NOT added under any record's `record_id` grouping key twist — it
+ *  carries the same `record_id` as its current successor (a superseded value is still
+ *  part of that record's history), and store.ts's `attrsByRecord` construction filters
+ *  on `status !== "SUPERSEDED"` so completeness/counts never double-count it.
+ *
+ *  Never touches the canonical demo record — its fixture values are asserted verbatim
+ *  in tests/architecture/fixtures-conform-to-contracts.test.ts. */
+const SUPERSESSION_CHAIN_COUNT = 3;
+
+interface SupersessionCandidate {
+  id: string;
+  record_id: string;
+  status: string;
+  value_display: string | null;
+  provenance_kind: string | null;
+  confidence: number | null;
+  created_at: string;
+  verification: { verdict: string; deterministic_check: string; rationale: string } | null;
+}
+
+function injectSupersessionChains(rng: Rng, values: unknown[]): void {
+  const candidates = (values as SupersessionCandidate[]).filter(
+    (v) =>
+      v.status === "ACCEPTED" &&
+      v.provenance_kind === "EXTRACTED" &&
+      v.record_id !== "rec_canonical_abc123",
+  );
+
+  const chosen = rng
+    .shuffle(candidates)
+    .slice(0, Math.min(SUPERSESSION_CHAIN_COUNT, candidates.length));
+
+  chosen.forEach((current, i) => {
+    // The pre-correction (superseded) snapshot — captured before `current` is mutated
+    // below, so it keeps the original extracted value, confidence, evidence, and
+    // verification exactly as they were.
+    const oldEntry = {
+      ...current,
+      id: `${current.id}_superseded_v${i + 1}`,
+      status: "SUPERSEDED",
+      created_at: isoDaysAgo(rng.int(15, 45)),
+    };
+    values.push(oldEntry);
+
+    current.provenance_kind = "HUMAN";
+    current.confidence = 1;
+    current.created_at = isoDaysAgo(rng.int(0, 2));
+    if (current.verification) {
+      current.verification = {
+        ...current.verification,
+        verdict: "ENTAILED",
+        deterministic_check: "exact",
+        rationale: `Reviewer correction supersedes the previously extracted value ("${
+          oldEntry.value_display ?? "unset"
+        }") — confirmed against the same source evidence.`,
+      };
+    }
+  });
 }
 
 function isSpecAttribute(code: string): boolean {

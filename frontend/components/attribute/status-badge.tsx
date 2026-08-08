@@ -8,11 +8,15 @@ import { STATUS, type SemanticStatus } from "@/lib/status";
 export function StatusBadge({
   status,
   label,
+  title,
   className,
 }: {
   status: SemanticStatus;
   /** Override the default token label, e.g. to add a count. */
   label?: string;
+  /** Override the default token description, e.g. a record-status-specific one
+   *  (lib/format/record-status.ts) rather than the generic attribute-value one. */
+  title?: string;
   className?: string;
 }) {
   const token = STATUS[status];
@@ -24,7 +28,7 @@ export function StatusBadge({
         token.bg,
         className,
       )}
-      title={token.description}
+      title={title ?? token.description}
     >
       <span aria-hidden="true">{token.glyph}</span>
       <span>{label ?? token.label}</span>

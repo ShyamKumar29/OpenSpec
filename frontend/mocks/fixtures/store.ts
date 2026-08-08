@@ -121,8 +121,15 @@ function buildStore() {
     docsResult.wrongRowEvidence,
   ) as WireAttrValue[];
 
+  // `attrsByRecord` is the *current* one-per-attribute set that drives completeness,
+  // RecordSummary counts, and GET /records/{id}'s `attributes` list — it must exclude
+  // SUPERSEDED entries (injected by attribute-values.ts's `injectSupersessionChains`),
+  // which exist only for individual lookup via `attributeValueById` below (the
+  // `/attributes/{id}/explain` and `/attributes/{id}/history` routes), never as part of
+  // a record's current attribute set.
   const attrsByRecord = new Map<string, WireAttrValue[]>();
   for (const av of attributeValues) {
+    if (av.status === "SUPERSEDED") continue;
     const list = attrsByRecord.get(av.record_id) ?? [];
     list.push(av);
     attrsByRecord.set(av.record_id, list);

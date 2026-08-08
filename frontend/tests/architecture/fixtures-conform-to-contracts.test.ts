@@ -87,6 +87,38 @@ describe("fixture universe conforms to lib/contracts", () => {
     expect(store.records.length).toBe(new Set(store.records.map((r) => r.id)).size);
   });
 
+  it("at least three SUPERSEDED values exist, each with a visible HUMAN-provenance successor (docs/14-frontend-implementation-plan.md §4.2)", () => {
+    const superseded = store.attributeValues.filter(
+      (av) => (av as { status: string }).status === "SUPERSEDED",
+    ) as { id: string; record_id: string; attribute_code: string; value_display: string | null }[];
+
+    expect(superseded.length).toBeGreaterThanOrEqual(3);
+
+    for (const old of superseded) {
+      // The chain's current member: same record + attribute, still addressable, not
+      // itself superseded, corrected by a human (INV-5: provenance is never upgraded by
+      // the client — this is the server-side correction path, `HUMAN` is a distinct kind).
+      const current = store.attributeValues.find(
+        (av) =>
+          (av as { record_id: string }).record_id === old.record_id &&
+          (av as { attribute_code: string }).attribute_code === old.attribute_code &&
+          (av as { status: string }).status !== "SUPERSEDED",
+      ) as { id: string; provenance_kind: string | null } | undefined;
+
+      expect(current, `no current successor found for superseded value ${old.id}`).toBeTruthy();
+      expect(current!.id).not.toBe(old.id);
+      expect(current!.provenance_kind).toBe("HUMAN");
+    }
+  });
+
+  it("SUPERSEDED values never appear in a record's current attribute list (GET /records/{id})", () => {
+    for (const detail of store.recordDetails.values()) {
+      for (const attr of detail.attributes as { status: string }[]) {
+        expect(attr.status).not.toBe("SUPERSEDED");
+      }
+    }
+  });
+
   it("the three canonical demo objects exist and are internally consistent", () => {
     const canonical = store.recordDetails.get("rec_canonical_abc123");
     expect(canonical).toBeTruthy();
