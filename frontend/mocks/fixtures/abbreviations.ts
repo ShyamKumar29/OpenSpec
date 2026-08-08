@@ -1,0 +1,51 @@
+/**
+ * The starter abbreviation dictionary (docs/domain/pvf-reference.md §8) — used to
+ * generate realistic thin distributor description strings for record fixtures.
+ */
+export const ABBREVIATIONS: Record<string, string> = {
+  VLV: "valve",
+  BLV: "ball valve",
+  BV: "ball valve",
+  GTV: "gate valve",
+  CKV: "check valve",
+  GLB: "globe valve",
+  THRD: "threaded",
+  SWT: "solder / sweat",
+  FLG: "flanged",
+  RED: "reducing",
+  CPLG: "coupling",
+  ELL: "elbow",
+  TEE: "tee",
+  NIP: "nipple",
+  ADPT: "adapter",
+  BSHG: "bushing",
+  BRS: "brass",
+  BRZ: "bronze",
+  SS: "stainless steel",
+  CI: "cast iron",
+  DI: "ductile iron",
+  CS: "carbon steel",
+  FP: "full port",
+  SP: "standard port",
+  RP: "reduced port",
+  LF: "lead free",
+  WOG: "water/oil/gas",
+  WSP: "working steam pressure",
+  CWP: "cold working pressure",
+  NPS: "nominal pipe size",
+  DN: "diametre nominal",
+};
+
+export const END_CONNECTION_ABBREVIATIONS: Record<string, string> = {
+  NPT_FEMALE: "FIP",
+  NPT_MALE: "MIP",
+  SOLDER: "CxC",
+  PRESS: "PRESS",
+  FLANGED: "FLG",
+  GROOVED: "GRV",
+  BUTT_WELD: "BW",
+  SOCKET_WELD: "SW",
+  COMPRESSION: "COMP",
+  BARB: "BARB",
+  SOLVENT_WELD: "SLIP",
+};
