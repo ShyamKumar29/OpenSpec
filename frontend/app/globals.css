@@ -1,0 +1,191 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Semantic status system (docs/06-frontend.md §5) — six states, each a fg/bg pair.
+     Never used alone: every rendering also carries a numeral/glyph and text label
+     (NFR-ACC-3). Do not add a seventh without updating components/status/tokens.ts. */
+  --color-status-accepted: var(--status-accepted-fg);
+  --color-status-accepted-bg: var(--status-accepted-bg);
+  --color-status-needs-review: var(--status-needs-review-fg);
+  --color-status-needs-review-bg: var(--status-needs-review-bg);
+  --color-status-needs-approval: var(--status-needs-approval-fg);
+  --color-status-needs-approval-bg: var(--status-needs-approval-bg);
+  --color-status-unknown: var(--status-unknown-fg);
+  --color-status-unknown-bg: var(--status-unknown-bg);
+  --color-status-rejected: var(--status-rejected-fg);
+  --color-status-rejected-bg: var(--status-rejected-bg);
+  --color-status-superseded: var(--status-superseded-fg);
+  --color-status-superseded-bg: var(--status-superseded-bg);
+
+  /* Elevation — compact, mostly flat UI; shadows reserved for floating layers */
+  --shadow-elevation-1: 0 1px 2px 0 oklch(0 0 0 / 0.04);
+  --shadow-elevation-2: 0 2px 8px -2px oklch(0 0 0 / 0.1);
+  --shadow-elevation-3: 0 8px 24px -4px oklch(0 0 0 / 0.16);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Status fg/bg pairs, light mode. fg carries >=4.5:1 contrast on both the plain
+     page background and its paired bg tint (WCAG AA, NFR-ACC-4). */
+  --status-accepted-fg: #166534;
+  --status-accepted-bg: #dcfce7;
+  --status-needs-review-fg: #92400e;
+  --status-needs-review-bg: #fef3c7;
+  --status-needs-approval-fg: #5b21b6;
+  --status-needs-approval-bg: #ede9fe;
+  --status-unknown-fg: #334155;
+  --status-unknown-bg: #f1f5f9;
+  --status-rejected-fg: #991b1b;
+  --status-rejected-bg: #fee2e2;
+  --status-superseded-fg: #374151;
+  --status-superseded-bg: #f3f4f6;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+
+  /* Status fg/bg pairs, dark mode. */
+  --status-accepted-fg: #86efac;
+  --status-accepted-bg: #052e16;
+  --status-needs-review-fg: #fcd34d;
+  --status-needs-review-bg: #451a03;
+  --status-needs-approval-fg: #c4b5fd;
+  --status-needs-approval-bg: #2e1065;
+  --status-unknown-fg: #cbd5e1;
+  --status-unknown-bg: #0f172a;
+  --status-rejected-fg: #fca5a5;
+  --status-rejected-bg: #450a0a;
+  --status-superseded-fg: #d1d5db;
+  --status-superseded-bg: #111827;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  /* Every metric and value display uses this — tabular figures so numbers in a
+     column align, per docs/06-frontend.md §5 ("tabular numerals for all metric and
+     value displays"). Use on any element that renders a number, confidence score,
+     count, or currency amount. */
+  .metric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
