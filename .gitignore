@@ -1,0 +1,25 @@
+# OpenSpec — repo-root ignores.
+# frontend/ has its own .gitignore for app-specific patterns.
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+
+# Claude Code local runtime state (not project config)
+.claude/
+
+# Corpus PDFs are gitignored per docs/07-devops.md — the manifest is tracked, the bytes are not
+corpus/**/*.pdf
+
+# Backend (not yet scaffolded; placeholder so future `backend/` follows the same convention)
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.venv/
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.pytest_cache/
+
+# Local env files
+.env
+.env.local
