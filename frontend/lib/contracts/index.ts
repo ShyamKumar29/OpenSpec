@@ -1,6 +1,7 @@
 export * from "./common";
 export * from "./attribute-value";
 export * from "./document";
+export * from "./explain";
 export * from "./record";
 export * from "./review";
 export * from "./run";

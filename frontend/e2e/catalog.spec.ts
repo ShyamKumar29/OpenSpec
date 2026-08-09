@@ -131,19 +131,25 @@ test.describe("Record Detail — hero state (the F1 Definition of Done)", () => 
     await expect(wogRow.getByRole("button", { name: "[why?]" })).toBeVisible();
   });
 
-  test("the [why?] popover shows evidence and verification from the record's own data", async ({
+  test("the Why panel shows evidence and verification from the record's own data (F3 — supersedes the F1 popover)", async ({
     page,
   }) => {
     await page.goto(`/catalog/${CANONICAL_ID}`);
     const wogRow = page.getByTestId("attribute-row").filter({ hasText: "Pressure Rating (WOG)" });
     await wogRow.getByRole("button", { name: "[why?]" }).click();
 
-    await expect(page.getByText("600 WOG", { exact: true })).toBeVisible();
-    await expect(page.getByText("ENTAILED")).toBeVisible();
+    const dialog = page.getByRole("dialog");
+    // "600 WOG" and "ENTAILED" each legitimately appear more than once in the full panel
+    // (verbatim citation vs. normalisation input; verdict vs. its echo in the confidence
+    // signal vector) — scope to the section that owns the claim (docs/06-frontend.md §3.2).
+    const evidenceSection = dialog.getByRole("heading", { name: "Evidence" }).locator("..");
+    const verificationSection = dialog.getByRole("heading", { name: "Verification" }).locator("..");
+    await expect(evidenceSection.getByText("600 WOG", { exact: true })).toBeVisible();
+    await expect(verificationSection.getByText("ENTAILED")).toBeVisible();
     // The verifier's rationale is templated from stored fixture data, not narrated
     // (docs/06-frontend.md §3.2) — it cites the bound catalog number and the MPN.
     await expect(
-      page.getByText(/Row bound to catalog no\. 70-104-01, matching ABC-123/),
+      verificationSection.getByText(/Row bound to catalog no\. 70-104-01, matching ABC-123/),
     ).toBeVisible();
   });
 
@@ -209,7 +215,9 @@ test.describe("Responsive behaviour (docs/06-frontend.md §9)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "ABC-123" })).toBeVisible();
 
     const attributesBox = await page.getByText("Group by section").boundingBox();
-    const documentBox = await page.getByText("Source document").boundingBox();
+    // Heading-scoped: below 1024px the pane also renders a "View source document" drawer
+    // trigger button, whose accessible name otherwise substring-matches plain text search.
+    const documentBox = await page.getByRole("heading", { name: "Source document" }).boundingBox();
     expect(attributesBox).not.toBeNull();
     expect(documentBox).not.toBeNull();
     // Stacked means the document pane starts below the attribute panel, not beside it.

@@ -61,7 +61,7 @@ export type RiskTier = (typeof RISK_TIERS)[number];
 
 // ---- Evidence -------------------------------------------------------------
 
-const evidenceWireSchema = z.object({
+export const evidenceWireSchema = z.object({
   document_version_id: z.string(),
   page: z.number().int().positive(),
   region_id: z.string(),
@@ -83,7 +83,11 @@ export interface Evidence {
   bbox: [number, number, number, number];
 }
 
-function adaptEvidence(wire: EvidenceWire): Evidence {
+/** Exported so `lib/contracts/explain.ts` can map the `/attributes/{id}/explain`
+ *  payload's evidence entries (which extend this same wire shape) without duplicating
+ *  the field list — one mapping per wire concept, per docs/14-frontend-implementation-
+ *  plan.md §5 ("Wire mapping ... happens exactly once"). */
+export function adaptEvidence(wire: EvidenceWire): Evidence {
   return {
     documentVersionId: wire.document_version_id,
     page: wire.page,
@@ -97,7 +101,7 @@ function adaptEvidence(wire: EvidenceWire): Evidence {
 
 // ---- Verification -----------------------------------------------------------
 
-const verificationWireSchema = z.object({
+export const verificationWireSchema = z.object({
   verdict: z.enum(["ENTAILED", "PARTIAL", "NOT_ENTAILED"]),
   deterministic_check: z.enum(["exact", "normalised", "partial", "fail"]),
   rationale: z.string(),
@@ -113,7 +117,7 @@ export interface Verification {
   verifierModel: string;
 }
 
-function adaptVerification(wire: VerificationWire): Verification {
+export function adaptVerification(wire: VerificationWire): Verification {
   return {
     verdict: wire.verdict,
     deterministicCheck: wire.deterministic_check,

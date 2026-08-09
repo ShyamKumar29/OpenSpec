@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { PageHeader } from "@/components/shell/page-header";
 import { PageContainer } from "@/components/shell/page-container";
-import { InProgressState } from "@/components/state/in-progress";
+import { LoadingTable } from "@/components/state/loading";
+import { DocumentsView } from "@/components/documents/documents-view";
 
 export const metadata: Metadata = { title: "Documents" };
 
@@ -13,10 +15,10 @@ export default function DocumentsPage() {
         description="Corpus browser, parse/binding status, unbound records."
       />
       <PageContainer>
-        <InProgressState
-          phase="F2"
-          note="The corpus browser and document health views land in F2, alongside DocumentViewer."
-        />
+        {/* DocumentsView reads useSearchParams — same Suspense requirement as /catalog. */}
+        <Suspense fallback={<LoadingTable rows={8} columns={6} />}>
+          <DocumentsView />
+        </Suspense>
       </PageContainer>
     </>
   );

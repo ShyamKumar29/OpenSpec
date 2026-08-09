@@ -4,6 +4,7 @@
  *  first (CLAUDE.md: confirm hard-to-reverse, outward-facing actions) since it queues
  *  real pipeline work against the record. */
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { useEnrichMutation } from "@/lib/queries/records";
 export function EnrichButton({ recordId }: { recordId: string }) {
   const [open, setOpen] = useState(false);
   const mutation = useEnrichMutation(recordId);
+  const router = useRouter();
 
   return (
     <>
@@ -31,7 +33,13 @@ export function EnrichButton({ recordId }: { recordId: string }) {
             {},
             {
               onSuccess: (result) => {
-                toast.success("Re-enrichment started", { description: `Run ${result.run_id}` });
+                toast.success("Re-enrichment started", {
+                  description: `Run ${result.run_id}`,
+                  action: {
+                    label: "View progress",
+                    onClick: () => router.push(`/runs/${result.run_id}`),
+                  },
+                });
               },
               onError: (error) => {
                 toast.error("Could not start re-enrichment", {

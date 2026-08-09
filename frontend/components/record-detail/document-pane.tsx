@@ -1,23 +1,33 @@
 "use client";
 
 /**
- * Document pane placeholder — reserved for F2 (docs/14-frontend-implementation-plan.md
- * §6 F1: "document pane placeholder reserved for F2"). Renders the real binding data
- * already on `RecordDetail` (document, region, binding confidence, match signals) as
- * text, never a rendered page or a highlight — that's `DocumentViewer`. Saying so
- * explicitly keeps this from being mistaken for the finished component.
+ * The record detail's document pane — now the real `DocumentViewer` (F2), replacing
+ * F1's text-only placeholder. Resolves the record's primary binding's region (to get its
+ * page/bbox — `DocumentBinding` itself carries only a `region_id`, per docs/api.md
+ * §Records) and renders it as the bound row's highlight, so opening a record already
+ * shows the family-table row it was matched against (demo beat 3) with no extra click.
+ *
+ * Responsive: an inline split view at `lg:` and above (matching the grid breakpoint
+ * `RecordDetailView` itself switches at), a drawer below it — docs/06-frontend.md §9's
+ * "collapsible document pane" / "document drawer" behaviour.
  */
-import Link from "next/link";
-import { FileQuestion } from "lucide-react";
+import { FileQuestion, FileText } from "lucide-react";
 import { ConfidenceIndicator } from "@/components/attribute/confidence-indicator";
 import { LoadingCard } from "@/components/state/loading";
 import { EmptyState } from "@/components/state/empty-state";
-import { useDocumentQuery } from "@/lib/queries/documents";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { DocumentViewer } from "@/components/document-viewer/document-viewer";
+import type { DocumentHighlight } from "@/components/document-viewer/span-highlight";
+import { useDocumentQuery, useDocumentRegionsQuery } from "@/lib/queries/documents";
+import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import type { DocumentBinding } from "@/lib/contracts/document";
 
 export function DocumentPane({ bindings }: { bindings: DocumentBinding[] }) {
   const binding = bindings[0] ?? null;
   const document = useDocumentQuery(binding?.documentVersionId ?? null);
+  const regions = useDocumentRegionsQuery(binding?.documentVersionId ?? null);
+  const isWide = useMediaQuery("(min-width: 1024px)");
 
   if (!binding) {
     return (
@@ -31,7 +41,32 @@ export function DocumentPane({ bindings }: { bindings: DocumentBinding[] }) {
     );
   }
 
+  const boundRegion = regions.data?.find((r) => r.id === binding.regionId) ?? null;
+  const highlights: DocumentHighlight[] = boundRegion
+    ? [
+        {
+          id: boundRegion.id,
+          page: boundRegion.page,
+          bbox: boundRegion.bbox,
+          label: boundRegion.text ?? "Bound row",
+          kind: "primary",
+        },
+      ]
+    : [];
+
   const signalEntries = Object.entries(binding.signals);
+  const otherBindings = bindings.slice(1);
+
+  const viewer = (
+    <DocumentViewer
+      documentVersionId={binding.documentVersionId}
+      highlights={highlights}
+      activeHighlightId={boundRegion?.id ?? null}
+      initialPage={boundRegion?.page}
+      title={document.data?.title ?? "source document"}
+      className="h-full"
+    />
+  );
 
   return (
     <div className="border-border flex flex-col gap-3 rounded-lg border p-4">
@@ -68,18 +103,31 @@ export function DocumentPane({ bindings }: { bindings: DocumentBinding[] }) {
         <p className="text-muted-foreground text-xs">Document metadata unavailable.</p>
       )}
 
-      <Link
-        href={`/documents/${binding.documentVersionId}`}
-        className="text-primary text-sm underline-offset-2 hover:underline"
-      >
-        Open in document corpus →
-      </Link>
+      {otherBindings.length > 0 ? (
+        <p className="text-status-needs-review bg-status-needs-review-bg rounded-md px-2 py-1.5 text-xs">
+          ⚠ {otherBindings.length} other document version{otherBindings.length === 1 ? "" : "s"}{" "}
+          also bound to this record — conflicting sources; each states a value independently.
+        </p>
+      ) : null}
 
-      <p className="text-muted-foreground border-border border-t pt-3 text-xs">
-        The rendered page with the highlighted evidence span arrives with the document viewer. Each
-        attribute&apos;s <span className="font-medium">[why?]</span> popover already shows its
-        verbatim citation.
-      </p>
+      {isWide ? (
+        <div className="min-h-[420px] flex-1">{viewer}</div>
+      ) : (
+        <Sheet>
+          <SheetTrigger
+            render={<Button variant="outline" size="sm" className="w-full justify-center gap-2" />}
+          >
+            <FileText className="size-4" aria-hidden="true" />
+            View source document
+          </SheetTrigger>
+          <SheetContent side="right" className="flex w-full flex-col sm:max-w-2xl">
+            <SheetHeader>
+              <SheetTitle>Source document</SheetTitle>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 px-4 pb-4">{viewer}</div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

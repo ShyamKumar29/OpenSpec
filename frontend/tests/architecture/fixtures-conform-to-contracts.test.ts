@@ -7,6 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { getStore } from "@/mocks/fixtures/store";
 import { reviewCounts } from "@/mocks/fixtures/aggregates";
+import { buildExplainPayload } from "@/mocks/fixtures/explain";
 import {
   attributeValueWireSchema,
   adaptAttributeValue,
@@ -15,6 +16,7 @@ import {
 import { recordDetailWireSchema } from "@/lib/contracts/record";
 import { documentDetailWireSchema, documentRegionWireSchema } from "@/lib/contracts/document";
 import { reviewTaskWireSchema, REVIEW_REASON_CODES } from "@/lib/contracts/review";
+import { attributeExplainWireSchema, adaptAttributeExplain } from "@/lib/contracts/explain";
 
 describe("fixture universe conforms to lib/contracts", () => {
   const store = getStore();
@@ -24,6 +26,31 @@ describe("fixture universe conforms to lib/contracts", () => {
       const parsed = attributeValueWireSchema.parse(av);
       expect(() => adaptAttributeValue(parsed)).not.toThrow();
     }
+  });
+
+  it("every attribute value's /attributes/{id}/explain payload parses as attributeExplainWireSchema and adapts without throwing (F3, risk F-6)", () => {
+    for (const av of store.attributeValues) {
+      const payload = buildExplainPayload(av, store);
+      const parsed = attributeExplainWireSchema.parse(payload);
+      expect(() => adaptAttributeExplain(parsed)).not.toThrow();
+    }
+  });
+
+  it("the canonical WOG pressure rating's explain payload carries the ANSI-Class-adjacent NRM-17 refusal on the ansi_class attribute (demo beat 4)", () => {
+    const canonicalAttrs = (store.recordDetails.get("rec_canonical_abc123")!.attributes ?? []) as {
+      id: string;
+      attribute: { code: string };
+    }[];
+    const ansiClassId = canonicalAttrs.find((a) => a.attribute.code === "ansi_class")?.id;
+    expect(ansiClassId).toBeTruthy();
+    const av = store.attributeValueById.get(ansiClassId!)!;
+    const payload = buildExplainPayload(av, store);
+    const explain = adaptAttributeExplain(attributeExplainWireSchema.parse(payload));
+    expect(explain.status).toBe("UNKNOWN");
+    expect(explain.evidence).toHaveLength(0);
+    expect(explain.verification).toBeNull();
+    const nrm17 = explain.validation.find((r) => r.ruleId === "NRM-17");
+    expect(nrm17?.passed).toBe(true);
   });
 
   it("every record detail parses as recordDetailWireSchema", () => {

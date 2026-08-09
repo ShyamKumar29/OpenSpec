@@ -24,7 +24,10 @@ export function UnknownValue({
       {!compact ? (
         <p className="text-muted-foreground text-xs">
           {copy.remediation}{" "}
-          <span className="text-muted-foreground/70">— fix owner: {copy.fixOwner}</span>
+          {/* Full-opacity, not /70 — the faded version drops below the 4.5:1 contrast
+           *  minimum (axe color-contrast; pre-existing bug surfaced by F4's Judge Mode
+           *  completion panel, which reuses this component for the ANSI Class hero row). */}
+          <span className="text-muted-foreground">— fix owner: {copy.fixOwner}</span>
         </p>
       ) : null}
     </div>

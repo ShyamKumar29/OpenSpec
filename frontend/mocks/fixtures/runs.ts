@@ -35,11 +35,15 @@ export function generateRuns(): unknown[] {
   const runs: unknown[] = [];
 
   // --- Judge Mode: success ---
+  // `record_id` points at the canonical demo record (docs/14-frontend-implementation-
+  // plan.md §4.2) so the completion panel can hand off into the real Why panel/document
+  // viewer for this MPN, rather than inventing a parallel result shape (F4 scope: "Reuse
+  // the existing OpenSpec provenance/evidence model").
   runs.push({
     id: "judge_run_success",
     kind: "judge",
     status: "completed",
-    record_id: null,
+    record_id: "rec_canonical_abc123",
     mpn: "ABC-123",
     stages: [
       stage("CLS", "done", 1, 1, 420, 0.002, "Classified: Ball Valve (Bronze/Brass) 0.97 rule+llm"),
@@ -75,6 +79,9 @@ export function generateRuns(): unknown[] {
     id: "judge_run_abstain",
     kind: "judge",
     status: "completed",
+    // Genuinely no catalog record for this MPN — the point of this scenario is that
+    // Judge Mode is isolated from catalog data (FR-JDG-5) and abstains rather than
+    // fabricating a binding, so there is nothing to hand off into.
     record_id: null,
     mpn: "XYZ-9001",
     stages: [
@@ -111,7 +118,7 @@ export function generateRuns(): unknown[] {
     id: "judge_run_rejected",
     kind: "judge",
     status: "completed",
-    record_id: null,
+    record_id: "rec_canonical_abc123",
     mpn: "ABC-123",
     stages: [
       stage("CLS", "done", 1, 1, 400, 0.002, "Classified: Ball Valve (Bronze/Brass) 0.97 rule+llm"),
