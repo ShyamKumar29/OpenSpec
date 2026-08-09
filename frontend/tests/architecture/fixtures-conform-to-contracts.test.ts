@@ -5,7 +5,7 @@
  * this fails here — not as a runtime surprise inside a component.
  */
 import { describe, expect, it } from "vitest";
-import { getStore } from "@/mocks/fixtures/store";
+import { getStore, stripInternalFields } from "@/mocks/fixtures/store";
 import { reviewCounts } from "@/mocks/fixtures/aggregates";
 import { buildExplainPayload } from "@/mocks/fixtures/explain";
 import {
@@ -20,6 +20,19 @@ import { attributeExplainWireSchema, adaptAttributeExplain } from "@/lib/contrac
 
 describe("fixture universe conforms to lib/contracts", () => {
   const store = getStore();
+
+  /** `recordDetails` deliberately omits `attributes` (mocks/fixtures/store.ts) — it's
+   *  composed live from `attrsByRecordId` on every `GET /records/{id}` request so a
+   *  review decision is reflected immediately. Tests that need the full `RecordDetail`
+   *  shape compose it the same way the route does. */
+  function fullDetail(id: string) {
+    const detail = store.recordDetails.get(id);
+    if (!detail) return undefined;
+    return {
+      ...detail,
+      attributes: (store.attrsByRecordId.get(id) ?? []).map(stripInternalFields),
+    };
+  }
 
   it("every attribute value parses as attributeValueWireSchema and adapts without throwing", () => {
     for (const av of store.attributeValues) {
@@ -37,7 +50,7 @@ describe("fixture universe conforms to lib/contracts", () => {
   });
 
   it("the canonical WOG pressure rating's explain payload carries the ANSI-Class-adjacent NRM-17 refusal on the ansi_class attribute (demo beat 4)", () => {
-    const canonicalAttrs = (store.recordDetails.get("rec_canonical_abc123")!.attributes ?? []) as {
+    const canonicalAttrs = fullDetail("rec_canonical_abc123")!.attributes as {
       id: string;
       attribute: { code: string };
     }[];
@@ -54,8 +67,8 @@ describe("fixture universe conforms to lib/contracts", () => {
   });
 
   it("every record detail parses as recordDetailWireSchema", () => {
-    for (const detail of store.recordDetails.values()) {
-      expect(() => recordDetailWireSchema.parse(detail)).not.toThrow();
+    for (const id of store.recordDetails.keys()) {
+      expect(() => recordDetailWireSchema.parse(fullDetail(id))).not.toThrow();
     }
   });
 
@@ -139,15 +152,15 @@ describe("fixture universe conforms to lib/contracts", () => {
   });
 
   it("SUPERSEDED values never appear in a record's current attribute list (GET /records/{id})", () => {
-    for (const detail of store.recordDetails.values()) {
-      for (const attr of detail.attributes as { status: string }[]) {
+    for (const id of store.recordDetails.keys()) {
+      for (const attr of fullDetail(id)!.attributes as { status: string }[]) {
         expect(attr.status).not.toBe("SUPERSEDED");
       }
     }
   });
 
   it("the three canonical demo objects exist and are internally consistent", () => {
-    const canonical = store.recordDetails.get("rec_canonical_abc123");
+    const canonical = fullDetail("rec_canonical_abc123");
     expect(canonical).toBeTruthy();
     expect(canonical!.mpn_raw).toBe("ABC-123");
 

@@ -241,4 +241,19 @@ describe("WhyPanelTrigger", () => {
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetch).toHaveBeenCalled();
   });
+
+  it("accepts a bare attributeValueId + attributeName (docs/14 F5: review tasks with no proposed value still have an underlying attribute_value to explain)", async () => {
+    useAttributeExplainQueryMock.mockReturnValue({
+      status: "success",
+      data: explainFor(unknownValue),
+      error: null,
+      refetch: vi.fn(),
+    });
+    render(<WhyPanelTrigger attributeValueId="av_2" attributeName="ANSI Class" />);
+
+    await userEvent.click(screen.getByRole("button", { name: "[why?]" }));
+
+    expect(screen.getByText("Why: ANSI Class")).toBeInTheDocument();
+    expect(useAttributeExplainQueryMock).toHaveBeenCalledWith("av_2");
+  });
 });

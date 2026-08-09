@@ -33,13 +33,27 @@ import {
   VerificationSection,
 } from "./why-panel-sections";
 
-export function WhyPanelTrigger({
-  value,
-  className,
-}: {
-  value: AttributeValue;
-  className?: string;
-}) {
+export type WhyPanelTriggerProps =
+  | {
+      value: AttributeValue;
+      attributeValueId?: undefined;
+      attributeName?: undefined;
+      className?: string;
+    }
+  | { value?: undefined; attributeValueId: string; attributeName: string; className?: string };
+
+/**
+ * Accepts either an already-fetched `AttributeValue` (Record Detail, Judge Mode) or a
+ * bare `attributeValueId` + `attributeName` (the Review Queue: a task whose proposed
+ * value is `null` — e.g. NO_DOCUMENT/AMBIGUOUS/CONFLICTING — still has an underlying
+ * `attribute_value` row worth explaining, but the review task DTO doesn't carry a full
+ * `AttributeValue` for it). Both forms open the identical `WhyPanelBody` — one component,
+ * one query, no duplicated evidence-rendering logic per phase.
+ */
+export function WhyPanelTrigger(props: WhyPanelTriggerProps) {
+  const { className } = props;
+  const attributeValueId = props.value ? props.value.id : props.attributeValueId;
+  const attributeName = props.value ? props.value.attribute.name : props.attributeName;
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -58,8 +72,8 @@ export function WhyPanelTrigger({
         [why?]
       </DialogTrigger>
       <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-4xl flex-col gap-3 overflow-hidden p-4 sm:max-w-4xl">
-        <DialogTitle>Why: {value.attribute.name}</DialogTitle>
-        {open ? <WhyPanelBody attributeValueId={value.id} /> : null}
+        <DialogTitle>Why: {attributeName}</DialogTitle>
+        {open ? <WhyPanelBody attributeValueId={attributeValueId} /> : null}
       </DialogContent>
     </Dialog>
   );

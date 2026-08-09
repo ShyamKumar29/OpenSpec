@@ -29,8 +29,9 @@ console.log(
 );
 
 const canonical = store.recordDetails.get("rec_canonical_abc123");
+const canonicalAttrs = store.attrsByRecordId.get("rec_canonical_abc123") ?? [];
 console.log("canonical record status:", canonical?.status, "class:", canonical?.class?.code);
-const pressureAttr = canonical?.attributes.find((a) => a.attribute.code === "pressure_rating_wog");
+const pressureAttr = canonicalAttrs.find((a) => a.attribute.code === "pressure_rating_wog");
 console.log("canonical pressure_rating_wog:", JSON.stringify(pressureAttr, null, 2));
-const ansiAttr = canonical?.attributes.find((a) => a.attribute.code === "ansi_class");
+const ansiAttr = canonicalAttrs.find((a) => a.attribute.code === "ansi_class");
 console.log("canonical ansi_class:", JSON.stringify(ansiAttr, null, 2));

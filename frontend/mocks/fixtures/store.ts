@@ -145,6 +145,16 @@ function buildStore() {
       docsResult.bindingsByRecord,
     ),
   );
+  // Deliberately excludes `attributes` — that field is recomputed live from
+  // `attrsByRecordId` on every `GET /records/{id}` request (see the route handler)
+  // instead of being baked in here. review-actions.ts mutates `WireAttrValue` objects
+  // in place (accept/reject/correct/approve); those objects are the *same references*
+  // held in `attrsByRecordId`'s arrays, so a snapshot copied out at store-build time
+  // would silently go stale the moment a reviewer resolved a task — the record page
+  // would keep showing the pre-decision status forever. `bindings` and the rest of the
+  // summary fields (completeness, class, status) are not part of review's mutation
+  // surface (INV-8: review actions never touch bindings/classification), so a
+  // build-time snapshot is fine for them here.
   const recordDetails = new Map(
     records.map((summary, i) => [
       summary.id,
@@ -156,7 +166,6 @@ function buildStore() {
           confidence: b.confidence,
           signals: b.signals,
         })),
-        attributes: (attrsByRecord.get(skeletons[i].id) ?? []).map(stripInternalFields),
       },
     ]),
   );
@@ -191,6 +200,10 @@ function buildStore() {
     skeletonById,
     records,
     recordDetails,
+    /** Live per-record attribute lists — the same `WireAttrValue` object references
+     *  `attributeValueById` and review tasks' `proposed_value` hold, so a mutation via
+     *  review-actions.ts is visible here immediately (see `recordDetails` above). */
+    attrsByRecordId: attrsByRecord,
     documents: docsResult.documents,
     documentByVersionId,
     pages: docsResult.pages,
@@ -207,7 +220,7 @@ function buildStore() {
   };
 }
 
-function stripInternalFields(av: WireAttrValue) {
+export function stripInternalFields(av: WireAttrValue) {
   const { record_id: _r, attribute_code: _c, attribute_name: _n, risk_tier: _t, ...rest } = av;
   void _r;
   void _c;

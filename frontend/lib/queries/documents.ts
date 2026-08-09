@@ -17,12 +17,33 @@ import {
   type DocumentSummary,
 } from "@/lib/contracts/document";
 
+/** Shared `queryKey`/`queryFn`/`staleTime` for a document's detail, so the review
+ *  queue's next-task prefetch (docs/06-frontend.md §6: "prefetch task n+1's payload and
+ *  its document page image") warms the exact same cache entry `useDocumentQuery` reads,
+ *  rather than re-describing the fetch. */
+export function documentDetailQueryOptions(versionId: string) {
+  return {
+    queryKey: queryKeys.documents.detail(versionId),
+    queryFn: () => apiFetch(`/documents/${versionId}`).then(adaptDocumentDetail),
+    staleTime: 5 * 60_000,
+  } as const;
+}
+
+export function documentRegionsQueryOptions(versionId: string) {
+  return {
+    queryKey: queryKeys.documents.regions(versionId),
+    queryFn: () =>
+      apiFetch<{ regions: unknown[] }>(`/documents/${versionId}/regions`).then((wire) =>
+        wire.regions.map(adaptDocumentRegion),
+      ),
+    staleTime: 5 * 60_000,
+  } as const;
+}
+
 export function useDocumentQuery(versionId: string | null) {
   return useQuery({
-    queryKey: queryKeys.documents.detail(versionId ?? "none"),
-    queryFn: () => apiFetch(`/documents/${versionId}`).then(adaptDocumentDetail),
+    ...documentDetailQueryOptions(versionId ?? "none"),
     enabled: versionId !== null,
-    staleTime: 5 * 60_000,
   });
 }
 
@@ -31,13 +52,8 @@ export function useDocumentQuery(versionId: string | null) {
  *  and document metadata — all three are static once a document version is parsed. */
 export function useDocumentRegionsQuery(versionId: string | null) {
   return useQuery({
-    queryKey: queryKeys.documents.regions(versionId ?? "none"),
-    queryFn: () =>
-      apiFetch<{ regions: unknown[] }>(`/documents/${versionId}/regions`).then((wire) =>
-        wire.regions.map(adaptDocumentRegion),
-      ),
+    ...documentRegionsQueryOptions(versionId ?? "none"),
     enabled: versionId !== null,
-    staleTime: 5 * 60_000,
   });
 }
 
