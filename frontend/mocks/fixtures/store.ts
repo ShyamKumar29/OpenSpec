@@ -7,11 +7,25 @@
  * (needs records + document bindings) -> review tasks (needs attribute values) ->
  * runs -> eval runs. Dashboard/queue aggregates are all *computed* from this data,
  * never hand-typed (risk F-3).
+ *
+ * **Live aggregates (F6).** Record-level `completeness` / `status` counts /
+ * `tier0_pending_count` / `unknown_count` are *derived*, not stored: `records` is a
+ * getter and `recordDetails` is a small class, both recomputing from the current
+ * `attrsByRecordId` state on every access (`liveRecordSummary`). Before F6 these were
+ * computed once in `buildStore()` and frozen into a plain array/Map — correct at
+ * server-start, but a review decision (accept/reject/correct/approve) mutates the
+ * underlying `WireAttrValue` objects in place (mocks/server/review-actions.ts) without
+ * ever touching that frozen snapshot, so the catalog list, the record-detail header,
+ * and every dashboard tile derived from `store.records` (mocks/fixtures/aggregates.ts)
+ * kept reporting pre-decision numbers for the rest of the process's life. Only
+ * `recordIdentities` (mpn/description/supplier/status/class/has_document/created_at —
+ * fields review never touches, and the one review *does* touch via a documented
+ * mutable exception, `class`) is still a plain built-once `Map`.
  */
 import { createRng } from "./rng";
 import { TAXONOMY } from "./taxonomy";
 import { generateRecordSkeletons, type RecordSkeleton } from "./records";
-import { generateDocuments } from "./documents";
+import { generateDocuments, type RecordBinding } from "./documents";
 import { generateAttributeValues } from "./attribute-values";
 import { generateReviewTasks, type RecordIndexEntry } from "./review-tasks";
 import { generateRuns } from "./runs";
@@ -108,6 +122,100 @@ export interface WireDocument {
   regions_summary: { table_count: number; row_count: number };
 }
 
+/** The fields that never change once generated — identity, classification, binding
+ *  existence. `class` is the one exception: `PATCH /records/{id}/class` mutates it in
+ *  place (manual reclassification writes `HUMAN` provenance), so it lives here as a
+ *  mutable object, not folded into a frozen summary. */
+export interface RecordIdentity {
+  id: string;
+  mpn_raw: string;
+  description_raw: string;
+  supplier_name: string | null;
+  status: RecordStatus;
+  class: ClassRefWire | null;
+  has_document: boolean;
+  created_at: string;
+  bindings: {
+    document_version_id: string;
+    region_id: string | null;
+    confidence: number;
+    signals: unknown;
+  }[];
+}
+
+/** Completeness + the two counts derived from it, computed fresh from whatever is
+ *  currently in `attrsByRecordId` — never cached (see `liveRecordSummary` below). */
+function computeCompleteness(attrs: WireAttrValue[]) {
+  // Schemas here are ~all mandatory (see mocks/fixtures/taxonomy.ts).
+  const mandatory = attrs;
+  const filled = mandatory.filter((a) => a.status !== "UNKNOWN").length;
+  const accepted = mandatory.filter((a) => a.status === "ACCEPTED").length;
+  const pendingReview = mandatory.filter(
+    (a) => a.status === "NEEDS_REVIEW" || a.status === "NEEDS_APPROVAL",
+  ).length;
+  const unknown = mandatory.filter((a) => a.status === "UNKNOWN").length;
+  const tier0Pending = mandatory.filter((a) => a.status === "NEEDS_APPROVAL").length;
+  return {
+    completeness: {
+      mandatory_total: mandatory.length,
+      filled,
+      accepted,
+      pending_review: pendingReview,
+      unknown,
+    },
+    tier0_pending_count: tier0Pending,
+    unknown_count: unknown,
+  };
+}
+
+/** Merges a record's static identity with its *current* attribute state — this is the
+ *  one function that produces a `RecordSummaryWire`, called fresh on every read so a
+ *  review decision (accept/reject/correct/approve) is reflected the instant it happens,
+ *  on the catalog list, the record header, and every dashboard aggregate derived from
+ *  them (see the module doc comment: this fixes the F1/F5 stale-snapshot issue). */
+function liveRecordSummary(identity: RecordIdentity, attrs: WireAttrValue[]) {
+  return {
+    id: identity.id,
+    mpn_raw: identity.mpn_raw,
+    description_raw: identity.description_raw,
+    supplier_name: identity.supplier_name,
+    status: identity.status,
+    class: identity.class,
+    has_document: identity.has_document,
+    created_at: identity.created_at,
+    ...computeCompleteness(attrs),
+  };
+}
+
+/** A `Map`-shaped (`get`/`has`/`keys`) view over `recordIdentities` that composes a
+ *  full `RecordDetail` (summary + bindings, still without `attributes`) fresh on every
+ *  `.get()` — see `liveRecordSummary`. Kept as its own small class, rather than a plain
+ *  `Map<string, RecordDetailWire>`, specifically so nothing can cache a detail object
+ *  past the moment it was read. */
+class LiveRecordDetails {
+  constructor(
+    private readonly identities: Map<string, RecordIdentity>,
+    private readonly attrsByRecordId: Map<string, WireAttrValue[]>,
+  ) {}
+
+  get(id: string) {
+    const identity = this.identities.get(id);
+    if (!identity) return undefined;
+    return {
+      ...liveRecordSummary(identity, this.attrsByRecordId.get(id) ?? []),
+      bindings: identity.bindings,
+    };
+  }
+
+  has(id: string): boolean {
+    return this.identities.has(id);
+  }
+
+  keys(): IterableIterator<string> {
+    return this.identities.keys();
+  }
+}
+
 function buildStore() {
   const rng = createRng(SEED);
 
@@ -137,36 +245,10 @@ function buildStore() {
 
   const skeletonById = new Map(skeletons.map((s) => [s.id, s]));
 
-  const records = skeletons.map((skeleton) =>
-    buildRecordSummary(
-      skeleton,
-      attrsByRecord.get(skeleton.id) ?? [],
-      rng,
-      docsResult.bindingsByRecord,
-    ),
-  );
-  // Deliberately excludes `attributes` — that field is recomputed live from
-  // `attrsByRecordId` on every `GET /records/{id}` request (see the route handler)
-  // instead of being baked in here. review-actions.ts mutates `WireAttrValue` objects
-  // in place (accept/reject/correct/approve); those objects are the *same references*
-  // held in `attrsByRecordId`'s arrays, so a snapshot copied out at store-build time
-  // would silently go stale the moment a reviewer resolved a task — the record page
-  // would keep showing the pre-decision status forever. `bindings` and the rest of the
-  // summary fields (completeness, class, status) are not part of review's mutation
-  // surface (INV-8: review actions never touch bindings/classification), so a
-  // build-time snapshot is fine for them here.
-  const recordDetails = new Map(
-    records.map((summary, i) => [
-      summary.id,
-      {
-        ...summary,
-        bindings: (docsResult.bindingsByRecord[skeletons[i].id] ?? []).map((b) => ({
-          document_version_id: b.documentVersionId,
-          region_id: b.regionId,
-          confidence: b.confidence,
-          signals: b.signals,
-        })),
-      },
+  const recordIdentities = new Map<string, RecordIdentity>(
+    skeletons.map((skeleton) => [
+      skeleton.id,
+      buildRecordIdentity(skeleton, rng, docsResult.bindingsByRecord),
     ]),
   );
 
@@ -198,8 +280,22 @@ function buildStore() {
   return {
     taxonomy: TAXONOMY,
     skeletonById,
-    records,
-    recordDetails,
+    /** Static identity per record (mutable only via `PATCH /records/{id}/class`).
+     *  `records` and `recordDetails` below are both *computed from this on every
+     *  access* — never read this directly for anything that should reconcile with the
+     *  live mock state (risk F-3, and the F1/F5 stale-aggregate fix this module
+     *  documents at the top). */
+    recordIdentities,
+    /** Every record's current summary, recomputed on each property access (a getter,
+     *  not a stored array) — `GET /records`, `GET /catalog/pull`, and every dashboard
+     *  aggregate in mocks/fixtures/aggregates.ts read this and so are live by
+     *  construction, with no separate "refresh the snapshot" step to forget. */
+    get records() {
+      return [...recordIdentities.values()].map((identity) =>
+        liveRecordSummary(identity, attrsByRecord.get(identity.id) ?? []),
+      );
+    },
+    recordDetails: new LiveRecordDetails(recordIdentities, attrsByRecord),
     /** Live per-record attribute lists — the same `WireAttrValue` object references
      *  `attributeValueById` and review tasks' `proposed_value` hold, so a mutation via
      *  review-actions.ts is visible here immediately (see `recordDetails` above). */
@@ -233,21 +329,15 @@ const CLASS_CONFIDENCE_BY_STATUS: Partial<Record<RecordStatus, number>> = {
   class_unresolved: 0.41,
 };
 
-function buildRecordSummary(
+/** Builds the static half of a record — everything review actions never mutate, plus
+ *  `class` (a documented mutable exception: `PATCH /records/{id}/class`). Completeness
+ *  and the counts derived from it are deliberately *not* computed here — see
+ *  `liveRecordSummary`. */
+function buildRecordIdentity(
   skeleton: RecordSkeleton,
-  attrs: WireAttrValue[],
   rng: ReturnType<typeof createRng>,
-  bindingsByRecord: Record<string, { documentVersionId: string }[]>,
-) {
-  const mandatory = attrs; // schemas here are ~all mandatory; see mocks/fixtures/taxonomy.ts
-  const filled = mandatory.filter((a) => a.status !== "UNKNOWN").length;
-  const accepted = mandatory.filter((a) => a.status === "ACCEPTED").length;
-  const pendingReview = mandatory.filter(
-    (a) => a.status === "NEEDS_REVIEW" || a.status === "NEEDS_APPROVAL",
-  ).length;
-  const unknown = mandatory.filter((a) => a.status === "UNKNOWN").length;
-  const tier0Pending = mandatory.filter((a) => a.status === "NEEDS_APPROVAL").length;
-
+  bindingsByRecord: Record<string, RecordBinding[]>,
+): RecordIdentity {
   const cls: ClassRefWire | null =
     skeleton.classIndex === null
       ? null
@@ -260,6 +350,8 @@ function buildRecordSummary(
           signal: "rule+llm",
         };
 
+  const bindings = bindingsByRecord[skeleton.id] ?? [];
+
   return {
     id: skeleton.id,
     mpn_raw: skeleton.mpnRaw,
@@ -267,17 +359,14 @@ function buildRecordSummary(
     supplier_name: skeleton.supplierName,
     status: skeleton.targetStatus,
     class: cls,
-    completeness: {
-      mandatory_total: mandatory.length,
-      filled,
-      accepted,
-      pending_review: pendingReview,
-      unknown,
-    },
-    tier0_pending_count: tier0Pending,
-    unknown_count: unknown,
-    has_document: (bindingsByRecord[skeleton.id]?.length ?? 0) > 0,
+    has_document: bindings.length > 0,
     created_at: skeleton.createdAt,
+    bindings: bindings.map((b) => ({
+      document_version_id: b.documentVersionId,
+      region_id: b.regionId,
+      confidence: b.confidence,
+      signals: b.signals,
+    })),
   };
 }
 

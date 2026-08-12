@@ -4,15 +4,17 @@ import { jsonResponse, notFound, problemResponse, simulateLatency } from "@/mock
 import { TAXONOMY } from "@/mocks/fixtures/taxonomy";
 
 /** `PATCH /records/{id}/class` — manual reclassification, writes `HUMAN` provenance
- *  (docs/api.md §Records). Genuinely mutates the in-memory store for this session.
- *  `attributes` is composed live the same way `GET /records/{id}` does — this route
- *  also returns a full `RecordDetail`, so it needs the same non-stale field. */
+ *  (docs/api.md §Records). Genuinely mutates the in-memory store for this session —
+ *  mutates `recordIdentities`, the one still-mutable source `recordDetails`/`records`
+ *  read from live (mocks/fixtures/store.ts), not the composed-fresh `recordDetails.get()`
+ *  result itself. `attributes` is composed live the same way `GET /records/{id}` does —
+ *  this route also returns a full `RecordDetail`, so it needs the same non-stale field. */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await simulateLatency(request, "decision");
   const { id } = await params;
   const store = getStore();
-  const detail = store.recordDetails.get(id);
-  if (!detail) return notFound(request, "Record", id);
+  const identity = store.recordIdentities.get(id);
+  if (!identity) return notFound(request, "Record", id);
 
   const body = (await request.json().catch(() => null)) as { class_code?: string } | null;
   const classCode = body?.class_code;
@@ -26,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     });
   }
 
-  detail.class = {
+  identity.class = {
     id: target.id,
     code: target.code,
     name: target.name,
@@ -35,6 +37,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     signal: "manual_reclassification",
   };
 
+  const detail = store.recordDetails.get(id)!;
   const attributes = (store.attrsByRecordId.get(id) ?? []).map(stripInternalFields);
   return jsonResponse(request, { ...detail, attributes });
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import { QueryProvider } from "@/lib/queries/provider";
@@ -7,14 +7,25 @@ import { ShortcutRegistryProvider } from "@/lib/keyboard/registry";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
-const geistSans = Geist({
+/**
+ * The Industrial Precision type pairing (Stitch `industrial_precision/DESIGN.md`):
+ * Hanken Grotesk carries structural hierarchy — headings, labels, nav — and JetBrains
+ * Mono carries every piece of *data*. The split is functional, not decorative: monospaced
+ * figures keep MPNs, confidences, and unit-bearing values aligned in a column, which is
+ * what makes a dense table scannable. The CSS variable names are kept as `--font-geist-*`
+ * deliberately — `app/globals.css` and a handful of components already reference them, and
+ * renaming them would be churn with no visual effect.
+ */
+const hankenGrotesk = Hanken_Grotesk({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -30,7 +41,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${hankenGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <a

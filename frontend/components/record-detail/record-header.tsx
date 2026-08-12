@@ -24,18 +24,23 @@ export function RecordHeader({ record }: { record: RecordDetail }) {
         Catalog
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-foreground text-lg font-semibold tracking-tight">
-              {record.mpnRaw}
-            </h1>
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <span className="label-caps text-muted-foreground">
+              {record.class?.name ?? "Unclassified"}
+            </span>
             <RecordStatusBadge status={record.status} />
           </div>
-          <p className="text-muted-foreground mt-0.5 text-sm">{record.descriptionRaw}</p>
-          {record.supplierName ? (
-            <p className="text-muted-foreground mt-0.5 text-xs">{record.supplierName}</p>
-          ) : null}
+          {/* The Stitch product-record screen leads with the part number as a display
+              title, with the description and supplier as monospaced metadata beneath. */}
+          <h1 className="text-foreground font-heading text-2xl leading-tight font-bold tracking-tight sm:text-[1.75rem]">
+            {record.mpnRaw}
+          </h1>
+          <p className="text-muted-foreground metric mt-1 text-[0.8125rem]">
+            {record.descriptionRaw}
+            {record.supplierName ? ` · ${record.supplierName}` : ""}
+          </p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -54,9 +59,9 @@ export function RecordHeader({ record }: { record: RecordDetail }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+      <div className="border-border flex flex-wrap items-center gap-x-8 gap-y-3 border-t pt-3">
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">Class</span>
+          <span className="label-caps text-muted-foreground">Class</span>
           {record.class ? (
             <>
               <span className="text-sm font-medium">{record.class.name}</span>
@@ -72,7 +77,7 @@ export function RecordHeader({ record }: { record: RecordDetail }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">Completeness</span>
+          <span className="label-caps text-muted-foreground">Completeness</span>
           <CompletenessBar completeness={record.completeness} />
         </div>
       </div>

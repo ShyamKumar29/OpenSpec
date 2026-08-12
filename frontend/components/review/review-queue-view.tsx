@@ -304,6 +304,27 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
       <PageHeader
         title="Review Queue"
         description="The throughput engine — reason-code tabs, keyboard-first decisions."
+        eyebrow="Human review workspace"
+        actions={
+          // The Stitch review screen pins two readouts to the header. Both are already
+          // computed for the queue itself — the open count from `GET /review/tasks/counts`
+          // and the session rate from `computeLocalThroughput` — so this is a second
+          // rendering of existing numbers, not a second source of truth.
+          <div className="border-border divide-border flex divide-x rounded-sm border">
+            <div className="px-3 py-1.5">
+              <div className="label-caps text-muted-foreground">Queue remaining</div>
+              <div className="metric text-foreground text-xl leading-tight font-bold">
+                {counts.data ? totalForTab : "—"}
+              </div>
+            </div>
+            <div className="px-3 py-1.5">
+              <div className="label-caps text-muted-foreground">Session rate</div>
+              <div className="metric text-foreground text-xl leading-tight font-bold">
+                {local.ratePerHour > 0 ? `${local.ratePerHour.toFixed(1)}/hr` : "—"}
+              </div>
+            </div>
+          </div>
+        }
       />
       <PageContainer className="flex flex-col gap-4">
         {counts.status === "error" ? (
@@ -419,7 +440,7 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
                   className="h-full"
                 />
               ) : (
-                <div className="border-border h-full rounded-lg border">
+                <div className="border-border bg-card h-full rounded-sm border">
                   <EmptyState
                     title="No source document"
                     description="This task has no bound document — that is itself the reason it needs review."

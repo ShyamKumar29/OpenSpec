@@ -12,7 +12,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api/client";
 import { queryKeys } from "./keys";
-import { adaptRun, type Run } from "@/lib/contracts/run";
+import { adaptCursorPage, type CursorPage } from "@/lib/contracts/common";
+import { adaptRun, type Run, type RunKind, type RunStatus } from "@/lib/contracts/run";
 
 const judgeRunResponseWireSchema = z.object({ run_id: z.string() });
 
@@ -80,6 +81,33 @@ export function useRunCancelMutation() {
   return useMutation({
     mutationFn: (runId: string) =>
       apiFetch<unknown>(`/runs/${runId}/cancel`, { method: "POST" }).then(adaptRun),
+  });
+}
+
+export interface RunListFilters {
+  status?: RunStatus;
+  kind?: RunKind;
+}
+
+/** `GET /runs` — list runs, most recent first (docs/api.md §Runs & progress, added F6).
+ *  Powers the dashboard's active-runs panel (FR-DSH-5). A short `staleTime` rather than
+ *  a subscription: the dashboard is a glance surface, not a live-narration one — the one
+ *  run actually being narrated live on the page uses `useRunStream` directly, same as
+ *  Judge Mode and `/runs/:id`. */
+export function useRunsQuery(filters: RunListFilters = {}) {
+  const query: Record<string, string> = {};
+  if (filters.status) query.status = filters.status;
+  if (filters.kind) query.kind = filters.kind;
+  return useQuery({
+    queryKey: queryKeys.runs.list(query),
+    queryFn: async (): Promise<CursorPage<Run>> => {
+      const wire = await apiFetch<{ items: unknown[]; next_cursor: string | null }>("/runs", {
+        query: { ...query, limit: 25 },
+      });
+      return adaptCursorPage(wire, adaptRun);
+    },
+    staleTime: 15_000,
+    refetchInterval: 15_000,
   });
 }
 

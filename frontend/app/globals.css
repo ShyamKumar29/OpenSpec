@@ -7,9 +7,11 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  /* Industrial Precision type pairing (Stitch `industrial_precision/DESIGN.md`):
+     Hanken Grotesk for structure, JetBrains Mono for data. Loaded in `app/layout.tsx`. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-heading: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -63,108 +65,142 @@
   --color-status-superseded: var(--status-superseded-fg);
   --color-status-superseded-bg: var(--status-superseded-bg);
 
-  /* Elevation — compact, mostly flat UI; shadows reserved for floating layers */
-  --shadow-elevation-1: 0 1px 2px 0 oklch(0 0 0 / 0.04);
-  --shadow-elevation-2: 0 2px 8px -2px oklch(0 0 0 / 0.1);
-  --shadow-elevation-3: 0 8px 24px -4px oklch(0 0 0 / 0.16);
+  /* Elevation — "physical tiering" (Stitch DESIGN.md §Elevation & Depth). Depth comes
+     from a 1px hairline against a distinct surface, not from soft drop shadows; the
+     shadows below are low-blur, low-opacity "lift" only, reserved for floating layers
+     (dialogs, the dashboard's overlay callouts). */
+  --shadow-elevation-1: 0 1px 0 0 oklch(0 0 0 / 0.05);
+  --shadow-elevation-2: 0 2px 6px -2px oklch(0 0 0 / 0.12);
+  --shadow-elevation-3: 0 6px 20px -6px oklch(0 0 0 / 0.28);
+
+  /* Chrome — the near-black bars that "bolt" the interface to the top and left edge
+     (Stitch DESIGN.md §Header Depth). Distinct from `--sidebar` so the rail and the
+     topbar stay in lockstep in both themes without either page-surface token moving. */
+  --color-chrome: var(--chrome);
+  --color-chrome-foreground: var(--chrome-foreground);
+  --color-chrome-border: var(--chrome-border);
+  --color-chrome-accent: var(--chrome-accent);
 }
 
+/* ---------------------------------------------------------------------------
+   Industrial Precision palette (Stitch `industrial_precision/DESIGN.md`).
+   Light is "industrial parchment" — a warm beige workspace with flat white data
+   surfaces; dark is "matte steel" — the same warm hue rotated to a low-luminance
+   ground. Status colours are pigment-based (deep forest / technical amber / muted
+   oxblood), never neon, and every `*-fg` clears 4.5:1 against BOTH the page ground
+   and its own `*-bg` tint (NFR-ACC-4). Values are hex rather than oklch so they can
+   be read straight out of an accessibility audit.
+   --------------------------------------------------------------------------- */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #f4f1ea;
+  --foreground: #171614;
+  --card: #ffffff;
+  --card-foreground: #171614;
+  --popover: #ffffff;
+  --popover-foreground: #171614;
+  --primary: #171614;
+  --primary-foreground: #faf8f4;
+  --secondary: #e7e2d7;
+  --secondary-foreground: #171614;
+  --muted: #ebe7dd;
+  --muted-foreground: #56524a;
+  --accent: #e7e2d7;
+  --accent-foreground: #171614;
+  --destructive: #8f1d18;
+  --border: #cdc5b4;
+  --input: #cdc5b4;
+  --ring: #171614;
+  /* Chart ink: a neutral value ladder, not a hue wheel — these encode magnitude, and
+     hue is reserved for status meaning (docs/06-frontend.md §5). */
+  --chart-1: #171614;
+  --chart-2: #56524a;
+  --chart-3: #857f72;
+  --chart-4: #b3ab99;
+  --chart-5: #d7d0c0;
+  --radius: 0.125rem;
+
+  --chrome: #121110;
+  --chrome-foreground: #f2efe8;
+  --chrome-border: #33302a;
+  --chrome-accent: #262421;
+
+  --sidebar: #121110;
+  --sidebar-foreground: #f2efe8;
+  --sidebar-primary: #f2efe8;
+  --sidebar-primary-foreground: #121110;
+  --sidebar-accent: #262421;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #33302a;
+  --sidebar-ring: #f2efe8;
 
   /* Status fg/bg pairs, light mode. fg carries >=4.5:1 contrast on both the plain
      page background and its paired bg tint (WCAG AA, NFR-ACC-4). */
-  --status-accepted-fg: #166534;
-  --status-accepted-bg: #dcfce7;
-  --status-needs-review-fg: #92400e;
-  --status-needs-review-bg: #fef3c7;
-  --status-needs-approval-fg: #5b21b6;
-  --status-needs-approval-bg: #ede9fe;
-  --status-unknown-fg: #334155;
-  --status-unknown-bg: #f1f5f9;
-  --status-rejected-fg: #991b1b;
-  --status-rejected-bg: #fee2e2;
-  --status-superseded-fg: #374151;
-  --status-superseded-bg: #f3f4f6;
+  --status-accepted-fg: #1c5c2a;
+  --status-accepted-bg: #dbe8db;
+  --status-needs-review-fg: #8a4b00;
+  --status-needs-review-bg: #f6e7cf;
+  --status-needs-approval-fg: #3f3a7d;
+  --status-needs-approval-bg: #e2e0ee;
+  --status-unknown-fg: #4a463d;
+  --status-unknown-bg: #e8e4da;
+  --status-rejected-fg: #8f1d18;
+  --status-rejected-bg: #f6dedb;
+  --status-superseded-fg: #565249;
+  --status-superseded-bg: #e9e5dc;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #14130f;
+  --foreground: #f2efe8;
+  --card: #1c1b17;
+  --card-foreground: #f2efe8;
+  --popover: #1c1b17;
+  --popover-foreground: #f2efe8;
+  --primary: #ede9e1;
+  --primary-foreground: #171614;
+  --secondary: #2a2823;
+  --secondary-foreground: #f2efe8;
+  --muted: #26241f;
+  --muted-foreground: #a9a294;
+  --accent: #2a2823;
+  --accent-foreground: #f2efe8;
+  --destructive: #e8837a;
+  --border: #35322b;
+  --input: #3d392f;
+  --ring: #a9a294;
+  --chart-1: #f2efe8;
+  --chart-2: #a9a294;
+  --chart-3: #7d776a;
+  --chart-4: #565249;
+  --chart-5: #35322b;
+
+  --chrome: #0c0b09;
+  --chrome-foreground: #eeeae2;
+  --chrome-border: #2b2823;
+  --chrome-accent: #22201c;
+
+  --sidebar: #0c0b09;
+  --sidebar-foreground: #eeeae2;
+  --sidebar-primary: #eeeae2;
+  --sidebar-primary-foreground: #0c0b09;
+  --sidebar-accent: #22201c;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #2b2823;
+  --sidebar-ring: #eeeae2;
 
   /* Status fg/bg pairs, dark mode. */
-  --status-accepted-fg: #86efac;
-  --status-accepted-bg: #052e16;
-  --status-needs-review-fg: #fcd34d;
-  --status-needs-review-bg: #451a03;
-  --status-needs-approval-fg: #c4b5fd;
-  --status-needs-approval-bg: #2e1065;
-  --status-unknown-fg: #cbd5e1;
-  --status-unknown-bg: #0f172a;
-  --status-rejected-fg: #fca5a5;
-  --status-rejected-bg: #450a0a;
-  --status-superseded-fg: #d1d5db;
-  --status-superseded-bg: #111827;
+  --status-accepted-fg: #79d18b;
+  --status-accepted-bg: #16301d;
+  --status-needs-review-fg: #e5b165;
+  --status-needs-review-bg: #33240c;
+  --status-needs-approval-fg: #aaa4e8;
+  --status-needs-approval-bg: #211f36;
+  --status-unknown-fg: #cac4b7;
+  --status-unknown-bg: #24221d;
+  --status-rejected-fg: #f09a92;
+  --status-rejected-bg: #351613;
+  --status-superseded-fg: #bcb7ac;
+  --status-superseded-bg: #232119;
 }
 
 @layer base {
@@ -183,9 +219,189 @@
   /* Every metric and value display uses this — tabular figures so numbers in a
      column align, per docs/06-frontend.md §5 ("tabular numerals for all metric and
      value displays"). Use on any element that renders a number, confidence score,
-     count, or currency amount. */
+     count, or currency amount. Under Industrial Precision it also carries the mono
+     face: monospaced digits are what make a column of MPNs, pressures, and
+     confidences scannable, which is the same argument tabular figures were chosen
+     for in the first place.  */
   .metric {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
+  }
+
+  /* Small-caps metadata label (Stitch DESIGN.md §Typography: "small-caps are utilised
+     for metadata labels to distinguish them from the actual data values"). Used for
+     panel titles, column groups, and the rail's nav captions. */
+  .label-caps {
+    font-family: var(--font-heading);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Instrument-scale variants of the same label, for the dashboard's command center and
+     its compact rails, where a 15rem-wide panel has to carry three columns of caption.
+     They exist as named modifiers rather than as arbitrary `text-[8.5px]` utilities
+     because `.label-caps` is declared in this same layer and would otherwise win the
+     cascade against them — a subtle, silent truncation bug the first time someone tried
+     it. Apply alongside `.label-caps`, never instead of it. */
+  .label-caps-sm {
+    font-size: 0.625rem;
+    line-height: 1.2;
+    letter-spacing: 0.07em;
+  }
+  .label-caps-xs {
+    font-size: 0.53125rem;
+    line-height: 1.25;
+    letter-spacing: 0.05em;
+  }
+
+  /* Structural hairline between dense data rows (DESIGN.md §Shapes: "1px hair-lines
+     to separate data rows; avoid thick borders"). */
+  .hairline {
+    border-color: color-mix(in srgb, var(--border) 65%, transparent);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Dashboard command-center environment (`components/dashboard/command-center.tsx`).
+
+   The visualization is a *site*, not a card: a warm near-black operational ground that
+   stays the same in light and dark mode, exactly like the chrome bar and the topbar's
+   pipeline strip — a control room does not repaint itself when the office lights go on.
+   Because that ground is fixed, the status hues used on it are pinned to the dark end of
+   the status palette in both themes (the same decision, and the same three values, as
+   `components/shell/pipeline-strip.tsx`); each clears 4.5:1 against `--env-deep`
+   (NFR-ACC-4), and nothing in the scene is encoded by colour alone — every node also
+   carries its label, its count, an icon, and an `sr-only` state word (NFR-ACC-3).
+   --------------------------------------------------------------------------- */
+.os-env {
+  /* Ground: a warm tan plaza lifting towards the engine, falling to deep shadow at the
+     frame edge. Three stops rather than two — the mid stop is what reads as haze. */
+  --env-deep: #191510;
+  --env-mid: #3d3123;
+  --env-plaza: #6e5a3b;
+  --env-block: #b39d78;
+  --env-ink: #f3ece0;
+  --env-ink-dim: #b8ac97;
+  --env-line: #d9c7a4;
+  /* The instrument cards bolted onto the environment. Opaque, never glass: the text on
+     them has to keep its contrast wherever in the city the card lands. */
+  --env-panel: #100e0a;
+  --env-panel-border: #3b352a;
+  --env-panel-border-hover: #6f6552;
+
+  --env-healthy: #79d18b;
+  --env-attention: #e5b165;
+  --env-critical: #f09a92;
+  --env-idle: #b0a795;
+
+  /* District masonry. The city is tinted by completeness, not by hue-for-hue's-sake:
+     a mostly-complete quarter is warmer and lighter, an incomplete one is grey and
+     dim. Deliberately low-chroma — the environment stays restrained so that the
+     *active* data (beams, beacons, nodes) is what carries the colour energy. */
+  --env-block-healthy: #a9b78d;
+  --env-block-attention: #c1a87c;
+  --env-block-critical: #bf928a;
+  --env-block-idle: #948d7d;
+
+  background:
+    radial-gradient(
+      ellipse 82% 78% at 50% 66%,
+      color-mix(in srgb, var(--env-plaza) 92%, transparent) 0%,
+      color-mix(in srgb, var(--env-mid) 96%, transparent) 52%,
+      var(--env-deep) 100%
+    ),
+    var(--env-deep);
+}
+
+/* ---------------------------------------------------------------------------
+   Command-center motion. Every effect is decorative, sits inside the `aria-hidden`
+   SVG, and represents live application state rather than running unconditionally:
+   packets only flow along channels that carry work, the core only pulses while a run
+   is genuinely in flight, and the sweep only turns while the engine is active. All of
+   it stops under `prefers-reduced-motion` (docs/06-frontend.md §5, NFR-ACC).
+   --------------------------------------------------------------------------- */
+@keyframes os-flow {
+  from {
+    stroke-dashoffset: 240;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes os-core-pulse {
+  0% {
+    r: 26;
+    opacity: 0.55;
+  }
+  100% {
+    r: 128;
+    opacity: 0;
+  }
+}
+
+@keyframes os-beacon {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.28);
+  }
+}
+
+@keyframes os-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer utilities {
+  .os-flow {
+    stroke-dasharray: 7 233;
+    animation: os-flow 3s linear infinite;
+  }
+  .os-core-pulse {
+    animation: os-core-pulse 3.6s ease-out infinite;
+  }
+  /* Scaling around the node's own centre, not the viewBox origin. */
+  .os-beacon {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: os-beacon 3.2s ease-in-out infinite;
+  }
+  .os-sweep {
+    transform-box: view-box;
+    animation: os-sweep 22s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-flow,
+  .os-core-pulse,
+  .os-beacon,
+  .os-sweep {
+    animation: none;
+  }
+  /* Reduced motion removes the movement, never the information: a channel that was
+     carrying packets stays visibly brighter than one that was not. */
+  .os-flow {
+    stroke-dasharray: none;
+    opacity: 0.45;
+  }
+  .os-core-pulse {
+    opacity: 0.16;
+  }
+  .os-beacon {
+    opacity: 0.6;
   }
 }

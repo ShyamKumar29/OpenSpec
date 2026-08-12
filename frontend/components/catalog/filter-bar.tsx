@@ -21,6 +21,7 @@ import {
 } from "@/lib/catalog/filters";
 import { RECORD_STATUSES, type RecordStatus } from "@/lib/contracts/record";
 import { RECORD_STATUS_LABEL } from "@/lib/format/record-status";
+import { cn } from "@/lib/utils";
 
 const ALL = "__all__";
 
@@ -41,10 +42,15 @@ const COMPLETENESS_LABELS: Record<string, string> = Object.fromEntries(
 export function FilterBar({
   filters,
   onChange,
+  layout = "rail",
 }: {
   filters: CatalogFilters;
   onChange: (next: CatalogFilters) => void;
+  /** `rail` is the Stitch "Filter Parameters" sidebar — one control per row, full width.
+   *  `bar` keeps the original inline row for any caller that has horizontal room. */
+  layout?: "rail" | "bar";
 }) {
+  const rail = layout === "rail";
   const [q, setQ] = useState(filters.q);
   const [supplier, setSupplier] = useState(filters.supplier ?? "");
 
@@ -79,8 +85,8 @@ export function FilterBar({
   }, [supplier]);
 
   return (
-    <div className="flex flex-wrap items-end gap-2.5">
-      <InputGroup className="w-full max-w-64">
+    <div className={cn(rail ? "flex flex-col gap-3" : "flex flex-wrap items-end gap-2.5")}>
+      <InputGroup className={cn("w-full", !rail && "max-w-64")}>
         <InputGroupAddon>
           <SearchIcon aria-hidden="true" />
         </InputGroupAddon>
@@ -104,14 +110,14 @@ export function FilterBar({
         ) : null}
       </InputGroup>
 
-      <FilterField label="Class">
+      <FilterField label="Class" rail={rail}>
         <Select
           value={filters.classCode ?? ALL}
           onValueChange={(value) =>
             onChange({ ...filters, classCode: value === ALL ? null : value })
           }
         >
-          <SelectTrigger aria-label="Filter by class" className="w-44">
+          <SelectTrigger aria-label="Filter by class" className={cn(rail ? "w-full" : "w-44")}>
             <SelectValue>
               {(value: string) => (value === ALL ? "All classes" : CLASS_LABELS[value])}
             </SelectValue>
@@ -127,7 +133,7 @@ export function FilterBar({
         </Select>
       </FilterField>
 
-      <FilterField label="Status">
+      <FilterField label="Status" rail={rail}>
         <Select
           value={filters.status ?? ALL}
           onValueChange={(value) =>
@@ -137,7 +143,10 @@ export function FilterBar({
             })
           }
         >
-          <SelectTrigger aria-label="Filter by record status" className="w-48">
+          <SelectTrigger
+            aria-label="Filter by record status"
+            className={cn(rail ? "w-full" : "w-48")}
+          >
             <SelectValue>
               {(value: string) =>
                 value === ALL ? "All statuses" : RECORD_STATUS_LABEL[value as RecordStatus]
@@ -155,14 +164,17 @@ export function FilterBar({
         </Select>
       </FilterField>
 
-      <FilterField label="Completeness">
+      <FilterField label="Completeness" rail={rail}>
         <Select
           value={filters.completenessLt !== null ? String(filters.completenessLt) : ALL}
           onValueChange={(value) =>
             onChange({ ...filters, completenessLt: value === ALL ? null : Number(value) })
           }
         >
-          <SelectTrigger aria-label="Filter by completeness" className="w-40">
+          <SelectTrigger
+            aria-label="Filter by completeness"
+            className={cn(rail ? "w-full" : "w-40")}
+          >
             <SelectValue>
               {(value: string) => (value === ALL ? "Any completeness" : COMPLETENESS_LABELS[value])}
             </SelectValue>
@@ -178,7 +190,7 @@ export function FilterBar({
         </Select>
       </FilterField>
 
-      <InputGroup className="w-44">
+      <InputGroup className={cn(rail ? "w-full" : "w-44")}>
         <InputGroupInput
           value={supplier}
           onChange={(e) => setSupplier(e.target.value)}
@@ -199,7 +211,7 @@ export function FilterBar({
         ) : null}
       </InputGroup>
 
-      <label className="flex h-8 items-center gap-2 text-sm">
+      <label className={cn("flex h-8 items-center gap-2 text-sm", rail && "w-full")}>
         {/* base-ui's Switch is a role="switch" span with a hidden native <input> beside
          *  it (not the input itself) — a wrapping <label> associates with that hidden
          *  input, but axe's aria-toggle-field-name rule checks the role="switch"
@@ -217,8 +229,9 @@ export function FilterBar({
 
       {hasActiveCatalogFilters(filters) ? (
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
+          className={cn(rail && "w-full")}
           onClick={() => {
             setQ("");
             setSupplier("");
@@ -240,10 +253,26 @@ export function FilterBar({
   );
 }
 
-function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+function FilterField({
+  label,
+  children,
+  rail = false,
+}: {
+  label: string;
+  children: React.ReactNode;
+  rail?: boolean;
+}) {
   return (
-    <div className="flex flex-col gap-1">
-      <Label className="text-muted-foreground text-[11px] font-normal">{label}</Label>
+    <div className={cn("flex flex-col gap-1", rail && "w-full")}>
+      <Label
+        className={cn(
+          rail
+            ? "label-caps text-muted-foreground"
+            : "text-muted-foreground text-[11px] font-normal",
+        )}
+      >
+        {label}
+      </Label>
       {children}
     </div>
   );

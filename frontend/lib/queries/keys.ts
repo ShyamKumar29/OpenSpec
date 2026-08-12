@@ -25,6 +25,7 @@ export const queryKeys = {
     sessionStats: () => ["review", "session-stats"] as const,
   },
   runs: {
+    list: (filters: Record<string, unknown>) => ["runs", "list", filters] as const,
     detail: (id: string) => ["runs", "detail", id] as const,
   },
   judge: {

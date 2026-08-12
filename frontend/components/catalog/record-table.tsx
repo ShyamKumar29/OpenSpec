@@ -29,13 +29,25 @@ const COLUMNS: {
   label: string;
   className: string;
 }[] = [
-  { key: "mpn_raw", label: "MPN / description", className: "min-w-72 flex-[3]" },
-  { key: null, label: "Class", className: "min-w-44 flex-[2]" },
-  { key: "completeness", label: "Completeness", className: "min-w-40 flex-[2]" },
-  { key: null, label: "Status mix", className: "min-w-40 flex-[2]" },
-  { key: "tier0_pending_count", label: "Tier-0 pending", className: "w-28 shrink-0 text-right" },
-  { key: "unknown_count", label: "Unknown", className: "w-24 shrink-0 text-right" },
-  { key: null, label: "Document", className: "w-24 shrink-0" },
+  // Columns drop out as the viewport narrows, rather than the table being clipped or the
+  // page being pushed into horizontal scroll. The order they leave in is the reverse of
+  // how much a data manager needs them: the MPN and the Unknown count survive to the
+  // narrowest width, the redundant status-mix re-encoding of completeness goes first.
+  //
+  // The visibility class must be `hidden …:block`, not `…:flex` — the cells are block
+  // elements inside a flex row, and the same `className` styles both the header cell and
+  // the body cell so the two can never disagree about which columns exist.
+  { key: "mpn_raw", label: "MPN / description", className: "min-w-56 flex-[3]" },
+  { key: null, label: "Class", className: "hidden min-w-36 flex-[2] lg:block" },
+  { key: "completeness", label: "Completeness", className: "hidden min-w-36 flex-[2] sm:block" },
+  { key: null, label: "Status mix", className: "hidden min-w-32 flex-[2] xl:block" },
+  {
+    key: "tier0_pending_count",
+    label: "Tier-0",
+    className: "hidden w-24 shrink-0 text-right md:block",
+  },
+  { key: "unknown_count", label: "Unknown", className: "w-20 shrink-0 text-right" },
+  { key: null, label: "Doc", className: "hidden w-16 shrink-0 sm:block" },
 ];
 
 export function RecordTable({
@@ -91,15 +103,26 @@ export function RecordTable({
     <div
       role="table"
       aria-label={`Records — ${records.length}${hasNextPage ? "+" : ""} loaded`}
-      className="border-border overflow-hidden rounded-lg border"
+      // No `overflow` value of any kind here. `overflow-x-auto` would also compute
+      // `overflow-y` to `auto` (CSS overflow spec), turning this div into a scrollport and
+      // breaking `useWindowVirtualizer`'s assumption that the page is the scroller; and
+      // `overflow-hidden` makes this an ancestor scroll container, which silently disables
+      // the sticky column header below. Columns are sized to fit instead (see COLUMNS).
+      className="border-border bg-card rounded-sm border"
     >
-      <div role="rowgroup">
-        <div
-          role="row"
-          className="bg-muted/50 border-border text-muted-foreground flex items-center border-b text-xs font-medium"
-        >
+      {/* Sticky header (Stitch DESIGN.md §Components: "data tables … sticky headers").
+          The `sticky` lives on the *rowgroup*, not the row: a sticky element can only
+          travel within its own parent's box, and the row's parent is this rowgroup — which
+          is only as tall as the header itself, so sticking it there would be a no-op.
+          `top-14` parks it directly under the 3.5rem chrome bar. */}
+      <div role="rowgroup" className="bg-muted border-border sticky top-14 z-10 border-b">
+        <div role="row" className="text-muted-foreground flex items-center">
           {COLUMNS.map((col) => (
-            <div key={col.label} role="columnheader" className={cn("px-3 py-2", col.className)}>
+            <div
+              key={col.label}
+              role="columnheader"
+              className={cn("label-caps px-3 py-2.5", col.className)}
+            >
               {col.key ? (
                 <SortButton
                   label={col.label}
@@ -134,7 +157,7 @@ export function RecordTable({
                   height: virtualRow.size,
                   transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                 }}
-                className="border-border hover:bg-muted/40 focus-within:bg-muted/40 flex cursor-pointer items-center border-b"
+                className="border-border hairline hover:bg-accent/50 focus-within:bg-accent/50 flex cursor-pointer items-center border-b transition-colors"
                 onClick={(e) => {
                   if ((e.target as HTMLElement).closest("a,button")) return;
                   router.push(`/catalog/${record.id}`);
@@ -249,7 +272,7 @@ function SortButton({
       variant="ghost"
       size="xs"
       className={cn(
-        "-mx-1.5 gap-1 px-1.5 font-medium",
+        "label-caps -mx-1.5 h-auto gap-1 px-1.5 py-0",
         active ? "text-foreground" : "text-muted-foreground",
       )}
       onClick={() => onFiltersChange({ ...filters, sort: toggleSort(filters.sort, field) })}

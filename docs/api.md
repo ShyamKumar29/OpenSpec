@@ -151,9 +151,16 @@ pixel space as the rendered page image for that `(version_id, page, dpi)`, origi
 
 | Method | Path | Purpose |
 |---|---|---|
+| `GET` | `/runs` | List runs, most recent first. Filters: `status`, `kind`. Powers the dashboard's active-runs tile (FR-DSH-5) |
 | `GET` | `/runs/{id}` | Run status, per-stage progress, cost, token totals |
 | `GET` | `/runs/{id}/events` | **SSE stream** of stage events |
 | `POST` | `/runs/{id}/cancel` | Cooperative cancel between stages |
+
+**Additive, non-breaking (adopted in `frontend-f6`):** `GET /runs` did not exist before F6 —
+FR-DSH-5 ("Active runs / enrichment progress") needs a list, and the frontend-first treaty (D2,
+`14-frontend-implementation-plan.md` §1) requires `api.md` to gain the route before the mock does,
+in the same PR. Same envelope as every other list endpoint (cursor pagination, `items`/`next_cursor`),
+same `Run` shape as `GET /runs/{id}`.
 
 **SSE event shape**
 
