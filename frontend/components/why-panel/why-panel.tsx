@@ -104,42 +104,78 @@ function WhyPanelBody({ attributeValueId }: { attributeValueId: string }) {
   const activeId = activeEvidenceId ?? highlights[0]?.id ?? null;
   const primaryEvidence = data.evidence[0] ?? null;
 
+  // Composed as the Stitch "Attribute Insight" screen: the final value stated once at the
+  // top, the derivation that produced it as a numbered spine on the left, and the proof —
+  // document snippet, confidence breakdown, governing policy — stacked on the right. The
+  // sections themselves are unchanged; what moved is that Confidence and Policy now sit
+  // beside the evidence they qualify rather than at the bottom of a six-item scroll.
   return (
-    <div className="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_420px]">
-      <div className="flex flex-col gap-3 overflow-y-auto pr-1">
-        <EvidenceSection
-          value={value}
-          evidence={data.evidence}
-          activeEvidenceId={activeId}
-          onShowOnPage={setActiveEvidenceId}
-        />
-        <VerificationSection verification={data.verification} />
-        <ValidationSection rules={data.validation} />
-        <NormalisationSection steps={data.transformChain} />
-        <ConfidenceSection value={assertedValue} signals={data.confidenceSignals} />
-        <PolicySection policy={data.policy} />
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="border-border bg-muted/40 flex flex-wrap items-end justify-between gap-3 rounded-sm border px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="label-caps text-muted-foreground">Attribute</p>
+          <p className="text-foreground text-sm font-medium">{value.attribute.name}</p>
+        </div>
+        <div className="min-w-0 text-right">
+          <p className="label-caps text-muted-foreground">
+            {assertedValue ? "Final normalised value" : "Outcome"}
+          </p>
+          {assertedValue ? (
+            <p className="metric text-foreground text-xl leading-tight font-bold">
+              {assertedValue.valueDisplay}
+            </p>
+          ) : (
+            // Just the word, not the full `UnknownValue`. The reason code and its
+            // remediation are the Evidence step's whole content immediately below; repeating
+            // them here would state the same finding twice on one screen.
+            <p className="metric text-status-unknown text-xl leading-tight font-bold">Unknown</p>
+          )}
+        </div>
       </div>
 
-      <div className="min-h-[240px] lg:min-h-0">
-        {primaryEvidence ? (
-          <DocumentViewer
-            documentVersionId={primaryEvidence.documentVersionId}
-            highlights={highlights}
-            activeHighlightId={activeId}
-            onActiveHighlightChange={setActiveEvidenceId}
-            title={value.attribute.name}
-            className="h-full"
+      <div className="grid min-h-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="flex flex-col gap-1 overflow-y-auto pr-1 pl-3">
+          <p className="label-caps text-muted-foreground mb-1">Extraction reasoning</p>
+          <EvidenceSection
+            value={value}
+            evidence={data.evidence}
+            activeEvidenceId={activeId}
+            onShowOnPage={setActiveEvidenceId}
           />
-        ) : (
-          <div className="border-border h-full rounded-lg border">
-            <EmptyState
-              icon={FileQuestion}
-              title="No document evidence"
-              description="This value has no evidence to show spatially — see the Evidence section for why."
-              className="h-full justify-center"
-            />
+          <VerificationSection verification={data.verification} />
+          <ValidationSection rules={data.validation} />
+          <NormalisationSection steps={data.transformChain} />
+        </div>
+
+        <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+          <div className="min-h-[240px] shrink-0">
+            {primaryEvidence ? (
+              <DocumentViewer
+                documentVersionId={primaryEvidence.documentVersionId}
+                highlights={highlights}
+                activeHighlightId={activeId}
+                onActiveHighlightChange={setActiveEvidenceId}
+                title={value.attribute.name}
+              />
+            ) : (
+              <div className="border-border h-full rounded-sm border">
+                <EmptyState
+                  icon={FileQuestion}
+                  title="No document evidence"
+                  description="This value has no evidence to show spatially — see the Evidence section for why."
+                  className="h-full justify-center"
+                />
+              </div>
+            )}
           </div>
-        )}
+
+          <div className="border-border shrink-0 rounded-sm border px-3 py-2.5">
+            <ConfidenceSection value={assertedValue} signals={data.confidenceSignals} />
+          </div>
+          <div className="border-border shrink-0 rounded-sm border px-3 py-2.5">
+            <PolicySection policy={data.policy} />
+          </div>
+        </div>
       </div>
     </div>
   );

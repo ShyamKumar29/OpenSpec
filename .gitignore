@@ -12,13 +12,23 @@ Thumbs.db
 # Corpus PDFs are gitignored per docs/07-devops.md — the manifest is tracked, the bytes are not
 corpus/**/*.pdf
 
-# Backend (not yet scaffolded; placeholder so future `backend/` follows the same convention)
+# Backend
 backend/__pycache__/
 backend/**/__pycache__/
 backend/.venv/
 backend/.mypy_cache/
 backend/.ruff_cache/
 backend/.pytest_cache/
+backend/**/*.egg-info/
+
+# LocalFsBlobStore's data dir (docs/10-roadmap.md M0, api/deps.py::get_blob_store) —
+# uploaded raw bytes retained byte-identical (FR-ING-7), local-dev only, never the
+# blob store of record (that's S3/Postgres per docs/07-devops.md §3's `cloud` topology)
+backend/.data/
+
+# make eval / scripts/run_eval.py output (EVL, M1, docs/10-roadmap.md) — generated
+# reports, timestamped per run, never source
+backend/evaluation/reports/
 
 # Local env files
 .env

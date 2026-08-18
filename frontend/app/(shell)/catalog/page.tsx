@@ -9,18 +9,22 @@ export const metadata: Metadata = { title: "Catalog" };
 
 export default function CatalogPage() {
   return (
+    // The header lives inside `CatalogView` rather than here, because the Stitch catalog
+    // screen states the live record count directly under the title and pins Sort/Export
+    // beside it — all three of which are client-side state. The Suspense fallback below
+    // renders the same header so the title does not appear, vanish, and reappear.
+    <Suspense fallback={<CatalogFallback />}>
+      <CatalogView />
+    </Suspense>
+  );
+}
+
+function CatalogFallback() {
+  return (
     <>
-      <PageHeader
-        title="Catalog"
-        description="Searchable, filterable record list with completeness."
-      />
+      <PageHeader title="Catalog" description="Searchable, filterable record list." />
       <PageContainer>
-        {/* CatalogView reads useSearchParams — Next.js requires a Suspense boundary
-         *  around any Client Component hook that opts out of static prerendering
-         *  (node_modules/next/dist/docs/.../use-search-params.md). */}
-        <Suspense fallback={<LoadingTable rows={10} columns={7} />}>
-          <CatalogView />
-        </Suspense>
+        <LoadingTable rows={10} columns={7} />
       </PageContainer>
     </>
   );

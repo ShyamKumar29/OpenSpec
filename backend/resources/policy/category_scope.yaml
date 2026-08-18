@@ -1,0 +1,21 @@
+# Category-scope boundary (UH3 §4: "Fittings first, Faucets second" —
+# docs/16-unilog-alignment.md). Each rule maps a `Classpath` prefix from the
+# client's Unicat LOV to one of the two categories this track scores against.
+#
+# Deliberately EMPTY today. `Unicat_Lov_v1_0_Updated_With_Remarks.xlsx` — the
+# only source that would tell us the real `Classpath` strings for Fittings and
+# Faucets — is not present in this environment (see
+# infrastructure/reference_data/missing_datasets.py). Inventing plausible-
+# looking prefixes here would be exactly the kind of fabricated reference data
+# CLAUDE.md and this track's brief forbid. `domain.model.taxonomy.classify_category`
+# correctly returns `None` (out of scope) for every classpath while this list
+# is empty — an honest "cannot classify yet", not a silent wrong answer.
+#
+# Fill in once the real file is supplied:
+#   rules:
+#     - category: FITTINGS
+#       classpath_prefix: "<real Classpath prefix from the LOV file>"
+#     - category: FAUCETS
+#       classpath_prefix: "<real Classpath prefix from the LOV file>"
+schema_version: "1"
+rules: []

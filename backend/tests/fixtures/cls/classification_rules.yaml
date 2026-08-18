@@ -1,0 +1,8 @@
+# Small, explicitly-labelled fixture — not real project data. See
+# tests/unit/test_cls_resources.py.
+schema_version: "1"
+rules:
+  - class_code: FIXTURE_CLASS
+    confidence: 0.5
+    required_keyword_groups:
+      - ["foo expansion"]

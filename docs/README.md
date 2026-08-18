@@ -36,6 +36,8 @@
 | [`12-hackathon-strategy.md`](12-hackathon-strategy.md) | Demo script, judging alignment, Q&A prep, backup plans | Team | Weekly in week 4 |
 | [`13-implementation-blueprint.md`](13-implementation-blueprint.md) | Build order, dependency graph, file creation order, context reset points | Implementers | Never (regenerate if scope changes) |
 | [`14-frontend-implementation-plan.md`](14-frontend-implementation-plan.md) | Frontend phases F0–F7, mock-data strategy, per-phase DoD | Frontend | Every frontend phase close |
+| [`15-backend-implementation-status.md`](15-backend-implementation-status.md) | What's actually built vs. designed in `backend/`, and the concrete next step | Backend | Every backend milestone boundary |
+| [`16-unilog-alignment.md`](16-unilog-alignment.md) | Gap analysis vs. the actual competition brief/ground truth, and the UH0–UH7 build order that supersedes M0–M6's execution order | All | Every UH milestone close |
 
 ### Technical
 

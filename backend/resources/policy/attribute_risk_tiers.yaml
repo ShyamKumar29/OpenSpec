@@ -1,0 +1,19 @@
+# Declarative risk-tier policy for LOV-sourced attributes (`SCH`, UH3 —
+# docs/16-unilog-alignment.md UH3). The client's LOV file does not carry
+# OpenSpec's own INV-9 risk-tier concept — that's this project's safety
+# classification, not the client's — so it is derived from attribute label
+# text against this keyword list rather than hardcoded per-attribute in code
+# (CLAUDE.md Conventions: "Thresholds & policies: Configuration, never
+# literals in code").
+#
+# `tier_0_keywords` are INV-9's own named categories, verbatim from CLAUDE.md:
+# "Tier-0 attributes never auto-accept (pressure, temperature, class,
+# compliance)". Matched case-insensitively as a substring of the attribute's
+# `normalized_label`.
+schema_version: "1"
+tier_0_keywords:
+  - pressure
+  - temperature
+  - class
+  - compliance
+default_tier: 1

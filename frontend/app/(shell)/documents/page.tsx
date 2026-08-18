@@ -9,16 +9,23 @@ export const metadata: Metadata = { title: "Documents" };
 
 export default function DocumentsPage() {
   return (
+    // As on /catalog, the header lives inside the view so it can state the live document
+    // count; the fallback renders the same header so the title never flickers.
+    <Suspense fallback={<DocumentsFallback />}>
+      <DocumentsView />
+    </Suspense>
+  );
+}
+
+function DocumentsFallback() {
+  return (
     <>
       <PageHeader
-        title="Documents"
-        description="Corpus browser, parse/binding status, unbound records."
+        title="Document corpus"
+        description="Manage, filter, and review ingested specification documents."
       />
       <PageContainer>
-        {/* DocumentsView reads useSearchParams — same Suspense requirement as /catalog. */}
-        <Suspense fallback={<LoadingTable rows={8} columns={6} />}>
-          <DocumentsView />
-        </Suspense>
+        <LoadingTable rows={8} columns={6} />
       </PageContainer>
     </>
   );

@@ -1,0 +1,15 @@
+# Classification thresholds (`CLS`, M1). Configuration, never literals in code
+# (CLAUDE.md Conventions: "Thresholds & policies: Configuration, never
+# literals in code"), mirroring `resources/policy/manufacturer_brand_resolution.yaml`'s
+# pattern.
+#
+# `llm_validated_confidence` is a fixed, deliberately conservative placeholder
+# assigned to any LLM-proposed class that survives taxonomy validation — never
+# the model's own self-reported confidence (CLAUDE.md: "never a model
+# self-report"). Uncalibrated: no gold set exists in this environment to fit
+# a real value against (the same standing gap `resources/policy/cnf_routing.yaml`
+# already documents for its own `accept_threshold`).
+schema_version: "1"
+rule_min_confidence: 0.6
+llm_validated_confidence: 0.7
+llm_model: "claude-sonnet-5"

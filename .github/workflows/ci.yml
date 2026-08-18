@@ -1,10 +1,12 @@
 name: CI
 
-# Stub per docs/07-devops.md §6.1 and docs/14-frontend-implementation-plan.md F0.
-# Only the frontend job exists — backend/ is not yet scaffolded. When it lands, add a
-# sibling `backend` job (lint → type check → architecture tests → unit → integration)
-# with its own `paths:` filter, per docs/07-devops.md §1 ("two independent jobs with
-# path filters").
+# docs/07-devops.md §1: "Two independent jobs with path filters. ~30 lines of YAML."
+# M0 (docs/10-roadmap.md) closed the gap the old stub comment here flagged — backend/
+# is scaffolded now, so it gets its own job below, `paths:`-filtered the same way the
+# frontend job already is, per docs/05-backend.md §9's suite list (lint → type check →
+# architecture → unit; `integration`/`contract` run in the same `pytest` invocation
+# today since they don't need a live Postgres yet — see
+# docs/15-backend-implementation-status.md §3).
 
 on:
   pull_request:
@@ -16,8 +18,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            backend:
+              - 'backend/**'
+
   frontend:
     name: frontend (lint · typecheck · unit · build · axe)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,3 +83,54 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report/
           retention-days: 7
+
+  backend:
+    name: backend (lint · typecheck · architecture · unit · contract)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -e ".[dev]"
+
+      # docs/05-backend.md §9: architecture (import-graph, INV-1/INV-6, no-eval,
+      # no-hard-delete) run inside the same `pytest tests/` invocation as unit +
+      # contract below — `tests/architecture/` is just another directory under
+      # `testpaths`, not a separate command, so a failure there fails this step
+      # exactly like any other test.
+      - name: Lint (ruff check)
+        run: python -m ruff check src tests
+
+      - name: Format check (ruff format)
+        run: python -m ruff format --check src tests
+
+      - name: Type check (mypy --strict on domain/ + application/)
+        run: python -m mypy src
+
+      - name: Unit + architecture + contract tests
+        run: python -m pytest -q
+
+      # docs/15-backend-implementation-status.md §3: no live Postgres in CI yet
+      # (no `postgres` service wired to this job) — `tests/integration/` is skipped
+      # rather than silently green until a repository implementation exists to test
+      # against a real database (docs/13-implementation-blueprint.md step 4).
+
+      # EVL (M1, docs/10-roadmap.md: "CI eval gate wired"). Not a metric-regression
+      # gate today — no real gold set exists yet
+      # (resources/reference/unihack/gold/README.md) — but this proves the harness
+      # runs end-to-end against real predictions every time pipeline code changes,
+      # and fails loudly if it ever stops running or stops reporting
+      # GOLD_SET_UNAVAILABLE honestly (e.g. a bug that fabricates a score). Becomes
+      # a real accuracy-regression gate the moment a real gold set lands
+      # (docs/decisions.md OD-7).
+      - name: Evaluation harness run (EVL)
+        run: python scripts/run_eval.py

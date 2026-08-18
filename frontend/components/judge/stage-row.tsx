@@ -12,7 +12,7 @@ const STATE_COPY: Record<StageDisplay["state"], string> = {
   skipped: "Skipped",
 };
 
-function StateIcon({ state }: { state: StageDisplay["state"] }) {
+function StateIcon({ state, frozen }: { state: StageDisplay["state"]; frozen: boolean }) {
   const cls = "size-4 shrink-0";
   switch (state) {
     case "done":
@@ -20,7 +20,11 @@ function StateIcon({ state }: { state: StageDisplay["state"] }) {
     case "running":
       return (
         <LoaderCircleIcon
-          className={cn(cls, "text-status-needs-review animate-spin motion-reduce:animate-none")}
+          className={cn(
+            cls,
+            "text-status-needs-review",
+            !frozen && "animate-spin motion-reduce:animate-none",
+          )}
           aria-hidden="true"
         />
       );
@@ -39,7 +43,7 @@ function StateIcon({ state }: { state: StageDisplay["state"] }) {
  *  alone is `aria-hidden`) — the same never-colour-alone discipline NFR-ACC-3 applies to
  *  confidence extends here to stage state. Multi-item stages (EXT/VER/VAL/NRM/CNF) get a
  *  live progress bar; single-unit stages (CLS/SCH/DOC/PRS) don't pretend to have one. */
-export function StageRow({ stage }: { stage: StageDisplay }) {
+export function StageRow({ stage, frozen = false }: { stage: StageDisplay; frozen?: boolean }) {
   const copy = STAGE_COPY[stage.stage];
   const hasProgress = stage.progressTotal > 1;
   const percent = hasProgress ? Math.round((stage.progressDone / stage.progressTotal) * 100) : 0;
@@ -56,7 +60,7 @@ export function StageRow({ stage }: { stage: StageDisplay }) {
     >
       <div className="flex items-center gap-2.5">
         <span className="sr-only">{STATE_COPY[stage.state]}</span>
-        <StateIcon state={stage.state} />
+        <StateIcon state={stage.state} frozen={frozen} />
         <span className="metric text-muted-foreground w-8 shrink-0 text-xs font-semibold tracking-wide">
           {stage.stage}
         </span>

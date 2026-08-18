@@ -9,6 +9,7 @@ import { TierBadge } from "./tier-badge";
 import { StatusBadge } from "./status-badge";
 import { UnknownValue } from "./unknown-value";
 import { WhyPanelTrigger } from "@/components/why-panel/why-panel";
+import { cn } from "@/lib/utils";
 
 /**
  * Composes value, confidence, provenance, tier, status, and evidence as separate
@@ -23,14 +24,30 @@ import { WhyPanelTrigger } from "@/components/why-panel/why-panel";
  * the value variant (FR-EXP-3; docs/06-frontend.md §3.2). F1's `EvidencePopover`, which
  * rendered only the record's already-fetched citation, is retired in F3.
  */
-export function AttributeRow({ value }: { value: AttributeValue }) {
+export function AttributeRow({
+  value,
+  layout = "auto",
+}: {
+  value: AttributeValue;
+  /** `auto` puts the name and the value side by side from `sm` up — right for a row in a
+   *  full-width table. `stacked` keeps them stacked at every width, for the narrow columns
+   *  the Stitch layouts put this row in (Judge Mode's "Emerging record" pane). The choice
+   *  is explicit rather than a container query because this component is rendered in
+   *  containers that do not all establish one, and silently falling back to stacked
+   *  everywhere would quietly flatten the record-detail table. */
+  layout?: "auto" | "stacked";
+}) {
+  const side = layout === "auto";
   return (
     <div
       data-testid="attribute-row"
       data-attribute-code={value.attribute.code}
-      className="border-border/60 flex flex-col gap-1.5 border-b py-2.5 last:border-0 sm:flex-row sm:items-start sm:gap-4"
+      className={cn(
+        "border-border/60 flex flex-col gap-1.5 border-b py-2.5 last:border-0",
+        side && "sm:flex-row sm:items-start sm:gap-4",
+      )}
     >
-      <div className="flex min-w-0 items-center gap-2 sm:w-60 sm:shrink-0">
+      <div className={cn("flex min-w-0 items-center gap-2", side && "sm:w-60 sm:shrink-0")}>
         <span className="text-foreground truncate text-sm">{value.attribute.name}</span>
         <TierBadge tier={value.attribute.riskTier} />
       </div>

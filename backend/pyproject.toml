@@ -1,0 +1,73 @@
+[project]
+name = "openspec-backend"
+version = "0.1.0"
+description = "OpenSpec — verification-first product-data enrichment API"
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "sqlalchemy>=2.0",
+    "pyyaml>=6.0",
+    # M0 (docs/10-roadmap.md): BlobStore local-fs+S3 adapters, LLMProvider
+    # real+cached+offline adapters, the Postgres migration path.
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
+    "boto3>=1.34",
+    "anthropic>=0.40",
+    "python-multipart>=0.0.9",
+    # M2 (docs/10-roadmap.md): PRS text/table extraction + rasterisation (ADR-0005,
+    # ADR-0012). PyMuPDF is rejected on licensing grounds — see ADR-0005.
+    "pdfplumber>=0.11",
+    "pypdfium2>=5.9",
+    "pytesseract>=0.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.27",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "types-PyYAML>=6.0",
+    "types-boto3[s3]>=1.34",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+exclude = ["tests/"]
+
+[[tool.mypy.overrides]]
+module = "openspec.domain.*"
+disallow_any_explicit = true
+
+[[tool.mypy.overrides]]
+module = "openspec.application.*"
+disallow_any_explicit = true
+
+[[tool.mypy.overrides]]
+# No published type stubs (M2: PRS rasterisation/OCR adapters, ADR-0005/ADR-0012).
+module = ["pypdfium2", "pytesseract"]
+ignore_missing_imports = true

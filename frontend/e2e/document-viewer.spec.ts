@@ -189,8 +189,10 @@ test.describe("DocumentViewer — document/page rendering, navigation, states", 
     await page.goto("/documents");
     await expect(page.getByTestId("document-row").first()).toBeVisible();
 
-    await page.getByLabel("Parse status").click();
-    await page.getByRole("option", { name: "Unparseable" }).click();
+    // Parse health is a counted checkbox facet rather than a select (the Stitch corpus
+    // browser's "PARSE HEALTH" rail). Same single-valued server filter, same
+    // `parse_status=` URL parameter, same result set — only the control changed.
+    await page.getByRole("checkbox", { name: /Unparseable/ }).click();
     await expect(page).toHaveURL(/parse_status=unparseable/);
     const rows = page.getByTestId("document-row");
     await expect(rows).toHaveCount(1);

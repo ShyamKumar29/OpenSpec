@@ -1,0 +1,16 @@
+# Confidence assigned to an independently-verified value (`VER`, M3 —
+# docs/10-roadmap.md M3 §9). Configuration, never a literal in code (CLAUDE.md
+# Conventions table). Fixed, documented constants per verdict tier — never the
+# LLM's own self-reported confidence (CLAUDE.md: "Confidence is a calibrated
+# composite of measured signals, never a model self-report").
+#
+# Not calibrated against real outcomes: no gold set exists in this environment
+# (docs/15-backend-implementation-status.md §7 onward) to fit these against real
+# precision numbers. Recalibrate once eval_result outcomes exist to score
+# against — the same caveat resources/policy/cnf_routing.yaml's
+# accept_threshold and resources/policy/manufacturer_brand_resolution.yaml's
+# thresholds already carry.
+schema_version: "1"
+llm_entailed_confidence: 0.9
+llm_partial_confidence: 0.5
+deterministic_only_confidence: 1.0

@@ -49,6 +49,9 @@ export interface LiveResultPanelProps {
   /** Suppresses the self-referential "View in Run Monitor" link when this panel is
    *  already rendered on `/runs/:id`. */
   hideRunMonitorLink?: boolean;
+  /** `narrow` renders the hand-off's attribute rows stacked, for the Judge Mode console's
+   *  "Emerging record" column; `wide` (default) is the full-width `/runs/:id` placement. */
+  width?: "wide" | "narrow";
 }
 
 export function LiveResultPanel({
@@ -62,17 +65,20 @@ export function LiveResultPanel({
   onUseCachedFallback,
   context = "judge",
   hideRunMonitorLink = false,
+  width = "wide",
 }: LiveResultPanelProps) {
   return (
     <div
-      className="border-border flex flex-col gap-3 rounded-lg border p-4"
+      className="flex flex-col gap-3 p-3"
       data-testid="live-result-panel"
       role="status"
       aria-live="polite"
     >
       <Headline phase={phase} totals={totals} elapsedMs={elapsedMs} costSoFar={costSoFar} />
 
-      {phase === "completed" ? <CompletedBody run={run} totals={totals} context={context} /> : null}
+      {phase === "completed" ? (
+        <CompletedBody run={run} totals={totals} context={context} width={width} />
+      ) : null}
 
       {(phase === "failed" || phase === "timed_out") && onUseCachedFallback ? (
         <p className="text-muted-foreground text-xs">
@@ -178,13 +184,15 @@ function CompletedBody({
   run,
   totals,
   context,
+  width,
 }: {
   run: Run | undefined;
   totals: RunTargetTotals;
   context: "judge" | "monitor";
+  width: "wide" | "narrow";
 }) {
   if (run?.recordId) {
-    return <RecordHandoff recordId={run.recordId} />;
+    return <RecordHandoff recordId={run.recordId} width={width} />;
   }
 
   if (context === "judge" && totals.liveUnknown > 0) {
@@ -201,7 +209,7 @@ function CompletedBody({
   return null;
 }
 
-function RecordHandoff({ recordId }: { recordId: string }) {
+function RecordHandoff({ recordId, width }: { recordId: string; width: "wide" | "narrow" }) {
   const record = useRecordDetailQuery(recordId);
 
   if (record.status === "pending") return <LoadingBlock rows={3} />;
@@ -213,9 +221,13 @@ function RecordHandoff({ recordId }: { recordId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="border-border rounded-lg border px-3">
+      <div className="border-border rounded-sm border px-3">
         {heroAttributes.map((value) => (
-          <AttributeRow key={value.id} value={value} />
+          <AttributeRow
+            key={value.id}
+            value={value}
+            layout={width === "narrow" ? "stacked" : "auto"}
+          />
         ))}
       </div>
       <Link href={`/catalog/${recordId}`} className="text-primary w-fit text-sm hover:underline">

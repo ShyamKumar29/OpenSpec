@@ -20,9 +20,23 @@ import { StatusMix } from "./status-mix";
 import { Button } from "@/components/ui/button";
 import { sortDirection, sortField, toggleSort, type CatalogFilters } from "@/lib/catalog/filters";
 import type { RecordSummary } from "@/lib/contracts/record";
+import { RECORD_STATUS_SEMANTIC } from "@/lib/format/record-status";
+import { statusBand } from "@/lib/status";
 import { cn } from "@/lib/utils";
 
 const ROW_HEIGHT = 56;
+
+/** Record states that earn the Stitch "banded row" treatment — a left rule and a faint
+ *  tint marking the row as needing someone's attention while scrolling. `healthy` and
+ *  `partially_enriched` are working as intended and stay unbanded; banding everything
+ *  would say nothing. */
+const BANDED_STATUSES = new Set([
+  "class_unresolved",
+  "unbound",
+  "conflicting_sources",
+  "unknown_heavy",
+  "awaiting_tier0_approval",
+]);
 
 const COLUMNS: {
   key: "mpn_raw" | "completeness" | "unknown_count" | "tier0_pending_count" | null;
@@ -157,7 +171,13 @@ export function RecordTable({
                   height: virtualRow.size,
                   transform: `translateY(${virtualRow.start - scrollMargin}px)`,
                 }}
-                className="border-border hairline hover:bg-accent/50 focus-within:bg-accent/50 flex cursor-pointer items-center border-b transition-colors"
+                className={cn(
+                  "border-border hairline hover:bg-accent/50 focus-within:bg-accent/50 flex cursor-pointer items-center border-b transition-colors",
+                  statusBand(
+                    RECORD_STATUS_SEMANTIC[record.status],
+                    BANDED_STATUSES.has(record.status),
+                  ),
+                )}
                 onClick={(e) => {
                   if ((e.target as HTMLElement).closest("a,button")) return;
                   router.push(`/catalog/${record.id}`);
@@ -241,11 +261,22 @@ export function RecordTable({
         </div>
       </div>
 
-      {isFetchingNextPage ? (
-        <p className="text-muted-foreground border-border border-t px-3 py-2 text-center text-xs">
-          Loading more records…
+      {/* Footer strip — the Stitch catalog closes its table with a bar stating the size
+          of the visible slice on the left and the pagination control on the right. Ours
+          states what a cursor-paginated list can honestly claim ("Showing N records",
+          with "+ more available" while a cursor remains) rather than an invented total,
+          and the control is "Load more" because that is what the API supports. */}
+      <div className="border-border bg-muted/40 flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2">
+        <p className="metric text-muted-foreground text-xs">
+          Showing {records.length} record{records.length === 1 ? "" : "s"}
+          {hasNextPage ? " — more available" : ""}
         </p>
-      ) : null}
+        {hasNextPage ? (
+          <Button variant="outline" size="xs" onClick={fetchNextPage} disabled={isFetchingNextPage}>
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

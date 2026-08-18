@@ -9,63 +9,53 @@ import {
 import { REVIEW_REASON_LABEL } from "@/lib/format/review-reason";
 
 /**
- * Reason-code tabs + counts, total open, and time remaining at the current rate
- * (docs/06-frontend.md §3.3: "412 open · ~2.4 h remaining at current rate" plus the six
- * `[ VERIFICATION_FAILED 88 ]`-style pills). Rendered as a horizontal strip, matching the
- * wireframe's actual layout rather than the component-hierarchy name's literal
- * "sidebar" (docs/06-frontend.md §4 names it `QueueSidebar`; §3.3 draws it as a top row).
+ * Reason-code tabs + counts (docs/06-frontend.md §3.3: the six
+ * `[ VERIFICATION_FAILED 88 ]`-style pills). Rendered as a compact chip group at the top
+ * of the Stitch review screen's "Active Tasks" rail — the filter belongs with the list it
+ * filters, which is where that screen puts it.
+ *
+ * The total-open count and the time-remaining estimate that used to live here now sit in
+ * the page header's stat cards; showing them twice on one screen was exactly the
+ * duplicated information the one-viewport principle asks us to remove.
  */
 export function QueueSidebar({
   counts,
   selected,
   onSelect,
-  etaHours,
   loading,
 }: {
   counts: ReviewCounts | undefined;
   selected: ReviewReasonCode | "ALL";
   onSelect: (reasonCode: ReviewReasonCode | "ALL") => void;
-  /** Hours remaining at the reviewer's current measured rate — `null` when there's not
-   *  yet enough session data (or the queue is empty) to estimate one. */
-  etaHours: number | null;
   loading?: boolean;
 }) {
   const totalOpen = counts?.totalOpen ?? 0;
 
   return (
-    <div className="flex flex-col gap-2" data-testid="queue-sidebar">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-foreground text-sm font-medium">
-          <span className="metric">{loading ? "…" : totalOpen}</span> open
-          {etaHours !== null ? (
-            <span className="text-muted-foreground metric font-normal">
-              {" "}
-              · ~{etaHours < 1 ? "<1" : etaHours.toFixed(1)} h remaining at current rate
-            </span>
-          ) : null}
-        </p>
-      </div>
-
-      {/* A toggle-button group, not an ARIA tablist: selecting one filters the list shown
-       *  below in place rather than switching between separate tabpanels, so
-       *  `aria-pressed` on plain buttons is the correct pattern here, not `role="tab"`. */}
-      <div role="group" aria-label="Review reason codes" className="flex flex-wrap gap-1.5">
+    // A toggle-button group, not an ARIA tablist: selecting one filters the list shown
+    // below in place rather than switching between separate tabpanels, so `aria-pressed`
+    // on plain buttons is the correct pattern here, not `role="tab"`.
+    <div
+      role="group"
+      aria-label="Review reason codes"
+      data-testid="queue-sidebar"
+      className="flex flex-wrap gap-1.5"
+    >
+      <ReasonTab
+        label="All"
+        count={loading ? 0 : totalOpen}
+        active={selected === "ALL"}
+        onClick={() => onSelect("ALL")}
+      />
+      {REVIEW_REASON_CODES.map((code) => (
         <ReasonTab
-          label="All"
-          count={totalOpen}
-          active={selected === "ALL"}
-          onClick={() => onSelect("ALL")}
+          key={code}
+          label={REVIEW_REASON_LABEL[code]}
+          count={counts?.counts[code] ?? 0}
+          active={selected === code}
+          onClick={() => onSelect(code)}
         />
-        {REVIEW_REASON_CODES.map((code) => (
-          <ReasonTab
-            key={code}
-            label={REVIEW_REASON_LABEL[code]}
-            count={counts?.counts[code] ?? 0}
-            active={selected === code}
-            onClick={() => onSelect(code)}
-          />
-        ))}
-      </div>
+      ))}
     </div>
   );
 }
@@ -88,7 +78,7 @@ function ReasonTab({
       data-testid="reason-tab"
       onClick={onClick}
       className={cn(
-        "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors",
+        "inline-flex h-6 items-center gap-1.5 rounded-sm border px-2 text-[11px] font-medium transition-colors",
         active
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted",

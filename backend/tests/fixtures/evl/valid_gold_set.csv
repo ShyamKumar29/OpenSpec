@@ -1,0 +1,4 @@
+record_id,field,expected_value,expected_unknown_reason,is_real
+r1,MFG_PART_NUM,ABC-123,,true
+r1,MANUFACTURER_NAME,,REFERENCE_DATA_UNAVAILABLE,true
+r2,MFG_PART_NUM,XYZ-789,,false

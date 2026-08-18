@@ -18,19 +18,24 @@
  * `session` state, from event handlers, never from a `useEffect` body.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ClipboardCheck, Inbox, SearchX } from "lucide-react";
 import { PageHeader } from "@/components/shell/page-header";
 import { PageContainer } from "@/components/shell/page-container";
+import { Panel, PanelBody, PanelHeader } from "@/components/shell/panel";
+import { StatCard, StatCardRow } from "@/components/shell/stat-card";
 import { LoadingBlock, LoadingCard } from "@/components/state/loading";
 import { ErrorState } from "@/components/state/error-state";
 import { EmptyState } from "@/components/state/empty-state";
 import { DocumentViewer } from "@/components/document-viewer/document-viewer";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useShortcut } from "@/lib/keyboard/registry";
+import { REVIEW_REASON_LABEL, REVIEW_REASON_SEMANTIC } from "@/lib/format/review-reason";
+import { STATUS } from "@/lib/status";
+import { cn } from "@/lib/utils";
 import { QueueSidebar } from "./queue-sidebar";
+import { TaskListRail } from "./task-list-rail";
 import { TaskCard } from "./task-card";
 import { DecisionBar, type ReviewDialogKind } from "./decision-bar";
 import { ThroughputMeter } from "./throughput-meter";
@@ -61,11 +66,26 @@ import type { UnknownReason } from "@/lib/contracts/attribute-value";
 function initialSession(initialTaskId: string | undefined): ReviewSessionState {
   const stored = loadReviewSession();
   if (!initialTaskId) return stored ?? newReviewSession("ALL");
-  // A deep link always wins over a stale stored position — jump straight to it, across
-  // every reason code so it's findable regardless of which tab it lives in.
+
+  // Two very different things arrive here as "a task id in the URL", and they need
+  // opposite handling:
+  //
+  //   1. Someone pasted or followed a link to a specific task. The stored reason-code tab
+  //      is unrelated to it, so widen to "ALL" — the task must be findable whichever tab
+  //      it actually lives in.
+  //
+  //   2. The reviewer reloaded the page on the task they were already working. Widening to
+  //      "ALL" there would silently discard the tab they had chosen, and with it the queue
+  //      that "bulk apply to similar tasks" counts against — the siblings sharing a
+  //      document live inside the chosen tab's page, not inside "ALL"'s first page.
+  //
+  // The stored pointer distinguishes them: it names the task this session was last on, so
+  // it matches on a reload of that task and will not match a foreign deep link.
+  const base = stored ?? newReviewSession("ALL");
+  const isOwnNavigation = stored?.currentTaskId === initialTaskId;
   return {
-    ...(stored ?? newReviewSession("ALL")),
-    reasonCode: "ALL",
+    ...base,
+    reasonCode: isOwnNavigation ? base.reasonCode : "ALL",
     currentTaskId: initialTaskId,
   };
 }
@@ -80,8 +100,6 @@ function nextIdAfterRemoving(order: string[], id: string): string | null {
 }
 
 export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const queryClient = useQueryClient();
   const isMobile = useMediaQuery("(max-width: 767px)");
 
@@ -133,7 +151,17 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
 
   // Deep link resolution: keep paging in until the requested task turns up or the tab
   // (here, "every open task") is exhausted.
-  const stillResolvingDeepLink = !!initialTaskId && !taskById.has(initialTaskId);
+  //
+  // `deepLinkActive` retires the deep link the moment the reviewer picks a reason code.
+  // Without it the screen deadlocks: the URL is rewritten to whatever task is open, so
+  // `initialTaskId` becomes a task in the *previous* tab; switching tabs then leaves an
+  // `initialTaskId` that the new tab can never contain, `stillResolvingDeepLink` stays
+  // true forever, and — because the URL-sync effect below is guarded on exactly that flag
+  // — the view can never recover, landing on "This task is no longer open" with a full
+  // queue behind it. Choosing a tab *is* the statement that the deep link no longer
+  // applies, so it is where the flag is cleared.
+  const [deepLinkActive, setDeepLinkActive] = useState(!!initialTaskId);
+  const stillResolvingDeepLink = deepLinkActive && !!initialTaskId && !taskById.has(initialTaskId);
   useEffect(() => {
     if (!stillResolvingDeepLink) return;
     if (tasksQuery.hasNextPage && !tasksQuery.isFetchingNextPage) {
@@ -168,11 +196,22 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
   // fallback (the front of whatever's loaded so far) — replacing the URL to it would
   // navigate away from `/review/:taskId` entirely, remounting this view with a new
   // `initialTaskId` and permanently losing the original target before it was ever found.
+  //
+  // `window.history.replaceState`, not `router.replace`. `/review` and `/review/:taskId`
+  // are separate route segments, so a router navigation between them *remounts this whole
+  // view* — and this effect fires on every task change, which means the queue was
+  // remounting itself constantly. That tore down whatever was on screen: a decision dialog
+  // opened by the reviewer would vanish mid-interaction, and the component's own state
+  // (chosen tab, optimistically removed tasks, skip order) was rebuilt from scratch each
+  // time. The native History API is documented by Next.js for exactly this case — it
+  // updates the URL and stays in sync with `usePathname`/`useSearchParams` without
+  // re-rendering the route (node_modules/next/dist/docs/.../linking-and-navigating.md
+  // §"Native History API"). `router` is still used for real navigations elsewhere.
   useEffect(() => {
     if (!currentTask || stillResolvingDeepLink) return;
     const target = `/review/${currentTask.id}`;
-    if (pathname !== target) router.replace(target, { scroll: false });
-  }, [currentTask, stillResolvingDeepLink, pathname, router]);
+    if (window.location.pathname !== target) window.history.replaceState(null, "", target);
+  }, [currentTask, stillResolvingDeepLink]);
 
   // "Never waiting": warm task n+1's document + regions + page image while task n is
   // open (docs/06-frontend.md §1 Thesis 2, §6).
@@ -183,6 +222,7 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
 
   function selectReasonCode(code: ReviewReasonCode | "ALL") {
     if (code === session.reasonCode) return;
+    setDeepLinkActive(false);
     setSession((prev) => ({ ...prev, reasonCode: code, currentTaskId: null, skippedIds: [] }));
     setRemovedIds(new Set());
   }
@@ -303,41 +343,38 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
     <>
       <PageHeader
         title="Review Queue"
-        description="The throughput engine — reason-code tabs, keyboard-first decisions."
+        description="Human review workspace for unresolved data points."
         eyebrow="Human review workspace"
         actions={
-          // The Stitch review screen pins two readouts to the header. Both are already
-          // computed for the queue itself — the open count from `GET /review/tasks/counts`
-          // and the session rate from `computeLocalThroughput` — so this is a second
-          // rendering of existing numbers, not a second source of truth.
-          <div className="border-border divide-border flex divide-x rounded-sm border">
-            <div className="px-3 py-1.5">
-              <div className="label-caps text-muted-foreground">Queue remaining</div>
-              <div className="metric text-foreground text-xl leading-tight font-bold">
-                {counts.data ? totalForTab : "—"}
-              </div>
-            </div>
-            <div className="px-3 py-1.5">
-              <div className="label-caps text-muted-foreground">Session rate</div>
-              <div className="metric text-foreground text-xl leading-tight font-bold">
-                {local.ratePerHour > 0 ? `${local.ratePerHour.toFixed(1)}/hr` : "—"}
-              </div>
-            </div>
-          </div>
+          // The Stitch review screen pins two readouts to the header as discrete cards.
+          // Both are already computed for the queue itself — the open count from
+          // `GET /review/tasks/counts` and the session rate from `computeLocalThroughput`
+          // — so this is a second rendering of existing numbers, not a second source of
+          // truth.
+          <StatCardRow label="Review session metrics" className="grid-cols-2">
+            <StatCard
+              label="Queue remaining"
+              value={counts.data ? totalForTab : "—"}
+              detail={
+                etaHours !== null
+                  ? `~${etaHours < 1 ? "<1" : etaHours.toFixed(1)} h at current rate`
+                  : undefined
+              }
+              className="min-w-36"
+            />
+            <StatCard
+              label="Session rate"
+              value={local.ratePerHour > 0 ? `${local.ratePerHour.toFixed(1)}` : "—"}
+              detail="decisions / hour"
+              className="min-w-36"
+            />
+          </StatCardRow>
         }
       />
       <PageContainer className="flex flex-col gap-4">
         {counts.status === "error" ? (
           <ErrorState error={counts.error} onRetry={() => counts.refetch()} />
-        ) : (
-          <QueueSidebar
-            counts={counts.data}
-            selected={reasonCode}
-            onSelect={selectReasonCode}
-            etaHours={etaHours}
-            loading={counts.status === "pending"}
-          />
-        )}
+        ) : null}
 
         {isMobile ? (
           <EmptyState
@@ -346,9 +383,9 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
             description="The keyboard-first decision flow needs a larger screen and a physical keyboard — open this page on a laptop or desktop to review tasks. Dashboard and Catalog work fine here (docs/06-frontend.md §9)."
           />
         ) : tasksQuery.status === "pending" || (stillResolvingDeepLink && !deepLinkNotFound) ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
-            <LoadingCard />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[19rem_minmax(0,1fr)]">
             <LoadingBlock rows={6} />
+            <LoadingCard />
           </div>
         ) : tasksQuery.status === "error" ? (
           <ErrorState error={tasksQuery.error} onRetry={() => tasksQuery.refetch()} />
@@ -365,62 +402,111 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
             description="Nothing waiting on a decision right now — check back after the next enrichment run, or pick a different reason code."
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-            <div className="flex flex-col gap-3">
-              <TaskCard
-                task={currentTask}
-                position={effectiveIndex + 1}
-                total={totalForTab || visibleOrder.length}
+          // The Stitch review composition: the queue itself as a rail on the left, the
+          // task under judgement as a titled comparison workspace, and its source evidence
+          // in a panel beneath — decision first, proof directly under it.
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[19rem_minmax(0,1fr)]">
+            <TaskListRail
+              tasks={visibleOrder.map((id) => taskById.get(id)!).filter(Boolean)}
+              currentTaskId={effectiveTaskId}
+              onSelect={(id) => {
+                // Picking a task from the rail is, like picking a tab, an explicit
+                // statement that the deep link the URL arrived with no longer applies.
+                setDeepLinkActive(false);
+                setSession((prev) => ({ ...prev, currentTaskId: id }));
+              }}
+              hasMore={tasksQuery.hasNextPage}
+              isLoadingMore={tasksQuery.isFetchingNextPage}
+              onLoadMore={() => void tasksQuery.fetchNextPage()}
+            >
+              <QueueSidebar
+                counts={counts.data}
+                selected={reasonCode}
+                onSelect={selectReasonCode}
+                loading={counts.status === "pending"}
               />
-              <DecisionBar
-                task={currentTask}
-                similarTaskCount={similarTaskCount}
-                disabled={isDecidingCurrent}
-                activeDialog={activeDialog}
-                onActiveDialogChange={setActiveDialog}
-                onAccept={() =>
-                  commit(currentTask, () => acceptMutation.mutateAsync(currentTask.id), "Accepted")
-                }
-                onApprove={() =>
-                  commit(
-                    currentTask,
-                    () => approveMutation.mutateAsync(currentTask.id),
-                    "Approved (Tier 0)",
-                  )
-                }
-                onReject={(reason: UnknownReason) =>
-                  commit(
-                    currentTask,
-                    () => rejectMutation.mutateAsync({ taskId: currentTask.id, reason }),
-                    "Rejected → Unknown",
-                  )
-                }
-                onUnknown={(reason: UnknownReason) =>
-                  commit(
-                    currentTask,
-                    () => rejectMutation.mutateAsync({ taskId: currentTask.id, reason }),
-                    "Marked Unknown",
-                  )
-                }
-                onCorrect={(value, reason) =>
-                  commit(
-                    currentTask,
-                    () => correctMutation.mutateAsync({ taskId: currentTask.id, value, reason }),
-                    "Correction saved",
-                  )
-                }
-                onSkip={handleSkip}
-                onBulk={handleBulk}
-              />
+            </TaskListRail>
+
+            <div className="flex min-w-0 flex-col gap-4">
+              <Panel>
+                <PanelHeader
+                  title={`Comparison: ${currentTask.recordMpn}`}
+                  as="h2"
+                  actions={
+                    <span
+                      className={cn(
+                        "label-caps rounded-sm px-1.5 py-0.5",
+                        STATUS[REVIEW_REASON_SEMANTIC[currentTask.reasonCode]].bg,
+                        STATUS[REVIEW_REASON_SEMANTIC[currentTask.reasonCode]].fg,
+                      )}
+                    >
+                      {REVIEW_REASON_LABEL[currentTask.reasonCode]}
+                    </span>
+                  }
+                />
+                <PanelBody>
+                  <TaskCard
+                    task={currentTask}
+                    position={effectiveIndex + 1}
+                    total={totalForTab || visibleOrder.length}
+                  />
+                </PanelBody>
+                <div className="border-border border-t">
+                  <DecisionBar
+                    task={currentTask}
+                    similarTaskCount={similarTaskCount}
+                    disabled={isDecidingCurrent}
+                    activeDialog={activeDialog}
+                    onActiveDialogChange={setActiveDialog}
+                    onAccept={() =>
+                      commit(
+                        currentTask,
+                        () => acceptMutation.mutateAsync(currentTask.id),
+                        "Accepted",
+                      )
+                    }
+                    onApprove={() =>
+                      commit(
+                        currentTask,
+                        () => approveMutation.mutateAsync(currentTask.id),
+                        "Approved (Tier 0)",
+                      )
+                    }
+                    onReject={(reason: UnknownReason) =>
+                      commit(
+                        currentTask,
+                        () => rejectMutation.mutateAsync({ taskId: currentTask.id, reason }),
+                        "Rejected → Unknown",
+                      )
+                    }
+                    onUnknown={(reason: UnknownReason) =>
+                      commit(
+                        currentTask,
+                        () => rejectMutation.mutateAsync({ taskId: currentTask.id, reason }),
+                        "Marked Unknown",
+                      )
+                    }
+                    onCorrect={(value, reason) =>
+                      commit(
+                        currentTask,
+                        () =>
+                          correctMutation.mutateAsync({ taskId: currentTask.id, value, reason }),
+                        "Correction saved",
+                      )
+                    }
+                    onSkip={handleSkip}
+                    onBulk={handleBulk}
+                  />
+                </div>
+              </Panel>
+
               <ThroughputMeter
                 resolvedCount={local.resolvedCount}
                 ratePerHour={local.ratePerHour}
                 medianDecisionMs={local.medianDecisionMs}
                 baselinePerHour={sessionStats.data?.baselinePerHour ?? 7}
               />
-            </div>
 
-            <div className="min-h-[320px] lg:sticky lg:top-4">
               {currentTask.documentVersionId ? (
                 <DocumentViewer
                   documentVersionId={currentTask.documentVersionId}
@@ -437,14 +523,12 @@ export function ReviewQueueView({ initialTaskId }: { initialTaskId?: string }) {
                       : []
                   }
                   title={currentTask.attributeName}
-                  className="h-full"
                 />
               ) : (
-                <div className="border-border bg-card h-full rounded-sm border">
+                <div className="border-border bg-card rounded-sm border">
                   <EmptyState
                     title="No source document"
                     description="This task has no bound document — that is itself the reason it needs review."
-                    className="h-full justify-center"
                   />
                 </div>
               )}

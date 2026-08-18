@@ -133,9 +133,23 @@ DEFERRED: every non-UNKNOWN current value has >= 1 evidence row    -- INV-1
 
 **`evidence`**
 
-`id`, `attribute_value_id` (FK, NOT NULL), `document_version_id`, `region_id`, `page`, `char_start`,
-`char_end`, `snippet_text` (**stored verbatim, redundantly — see `03-ai-pipeline.md` §3.3**),
-`bbox`, `context_shown` JSONB, `rank`.
+`id`, `attribute_value_id` (FK, NOT NULL), `kind` (**UH1**, `16-unilog-alignment.md` G1 —
+`DOCUMENT_SPAN` | `SOURCE_ROW_SPAN` | `REFERENCE_TABLE_ROW`), `snippet_text` (**stored verbatim,
+redundantly regardless of kind — see `03-ai-pipeline.md` §3.3**), `context_shown` JSONB, `rank`,
+plus three nullable column groups — exactly one populated per row, matching `kind`:
+
+- `DOCUMENT_SPAN`: `document_version_id`, `region_id`, `page`, `char_start`, `char_end`, `bbox`
+- `SOURCE_ROW_SPAN`: `source_dataset`, `row_identifier`, `source_column`
+- `REFERENCE_TABLE_ROW`: `reference_dataset`, `row_key`, `reference_field`
+
+Evidence originally assumed every value traced to a parsed document. Most ground-truth values in
+the UniHack dataset come from the supplier's own input row or an approved reference table (LOV,
+manufacturer list) instead — `evidence` widened to a tagged union rather than gaining a second,
+parallel table, so INV-1/INV-3 ("no unsourced assertion", "the citation must entail the value")
+apply uniformly regardless of which kind of source a value came from. A `CHECK` constraint
+(`ck_evidence_kind_field_shape`) enforces that exactly the right column group is non-null for a
+row's `kind` — the DB-level mirror of each `Evidence` variant's constructor validation in
+`domain/model/attribute.py`.
 
 **`verification`**
 

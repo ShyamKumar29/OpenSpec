@@ -96,6 +96,37 @@
 `BELOW_CONFIDENCE_THRESHOLD` · `CLASS_UNRESOLVED` · `CONFLICTING_SOURCES` · `POLICY_BLOCKED` ·
 `SYSTEM_ERROR`
 
+**`evidence[]` is a tagged union, discriminated by `kind` (UH1, `16-unilog-alignment.md` G1,
+additive/non-breaking).** The original design assumed every value traces to a PDF span. Most
+ground-truth values in the UniHack dataset come from the supplier's own input row or an approved
+reference table (LOV, manufacturer list) instead — `DOCUMENT_SPAN` above is now one of three kinds:
+
+```json
+// kind: "SOURCE_ROW_SPAN" — read straight from the supplier/input dataset row itself
+{ "kind": "SOURCE_ROW_SPAN", "source_dataset": "sample_input.csv", "row_identifier": "row_47",
+  "source_column": "Part_Desc", "snippet_text": "AVM6 EV Mini Snip Red" }
+
+// kind: "REFERENCE_TABLE_ROW" — read from an approved, curated reference table/LOV
+{ "kind": "REFERENCE_TABLE_ROW", "reference_dataset": "manufacturer_brand_list",
+  "row_key": "12443", "reference_field": "BRAND_NAME", "snippet_text": "FRIGIDAIRE®" }
+```
+
+INV-1 ("no unsourced assertion") and INV-3 ("the cited span must deterministically
+contain/entail the value") apply identically to all three kinds; only what "the cited span" *is*
+differs — a document region, an input-file cell, or a reference-table cell. `snippet_text` is the
+one field every kind shares (the verbatim cited value); each kind otherwise carries only the
+identity fields that locate it in its own source, so a consumer never sees a `SOURCE_ROW_SPAN`
+entry with a null `page`/`bbox` — those keys are absent, not null.
+
+Today, `GET /records`/`GET /records/{id}` only ever emit `DOCUMENT_SPAN` evidence — no pipeline
+stage produces `SOURCE_ROW_SPAN`/`REFERENCE_TABLE_ROW` evidence yet (that starts at UH2). The
+`DOCUMENT_SPAN` shape itself is unchanged field-for-field from before UH1; `kind` is the only
+addition, and it is additive for existing consumers (`frontend/lib/contracts/attribute-value.ts`'s
+`evidenceWireSchema` silently drops fields it doesn't recognise — verified, not assumed). A future
+milestone that starts serving non-document evidence to the frontend will need
+`evidenceWireSchema` widened into the same discriminated union client-side; that frontend change
+is out of scope for UH1 (frontend frozen for this track).
+
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/attributes/{id}/explain` | **The "Why?" panel payload** — evidence, verification, validation results, transform chain, confidence signal breakdown, policy note |
@@ -128,6 +159,38 @@ rectangles) is possible without a second request.
 
 Convention: `bbox` (in `AttributeValue.evidence` and in `DocumentRegion`) is in the same
 pixel space as the rendered page image for that `(version_id, page, dpi)`, origin top-left.
+
+**Wire shapes implemented at M2** (`docs/10-roadmap.md` M2; previously one-line placeholders
+above — filled in here per this doc's own rule, "changes BEFORE the endpoint does"):
+
+`POST /documents` — `multipart/form-data`: `file` (the PDF), `publisher`, `title`, `doc_type`
+(one of `DOC_TYPES` above, default `spec_sheet`), `source_url` (optional). Synchronous today
+(parses inline, no queue/worker yet — same "shaped as the documented `202`, body available
+immediately" pattern `POST /records/import` already established). Response `202`:
+
+```json
+{ "document_version_id": "docver_...", "parse_status": "parsed",
+  "already_existed": false, "parse_failure_reason": null }
+```
+
+`document_version_id` is content-addressed (`docs/04-data-model.md` §3.3): re-uploading
+byte-identical content returns the existing version with `already_existed: true` rather than
+reprocessing it. `parse_status` is one of `pending | parsed | unparseable | ocr_fallback`;
+`parse_failure_reason` is non-null only when parsing failed (one of `domain/prs/parse_result.py`'s
+`ParseFailureReason` codes) — the version is still registered (not silently dropped) so a
+corrupt upload is visible in the corpus list as `unparseable`, never a bare `4xx`.
+
+`POST /records/{id}/bindings` — body `{ "document_version_id": "...", "region_id": null,
+"confidence": 1.0 }` (`region_id`/`confidence` optional, default `null`/`1.0`). Always creates a
+`HUMAN`-provenance, `ACCEPTED` binding (a human attaching a document is, by definition, a
+confident action — no auto-accept threshold applies). Returns `201` with the same shape as a
+`bindings[]` entry on `GET /records/{id}` (`document_version_id`, `region_id`, `confidence`,
+`signals`). `404` if the record doesn't exist.
+
+`DELETE /records/{id}/bindings/{binding_id}` — `204` on success, `404` if no such binding is
+currently attached (already detached or never existed — both look the same to the caller, per
+INV-8: detachment is soft, never a hard delete, so "already detached" and "never existed" are
+deliberately indistinguishable from the outside).
 
 ---
 

@@ -1,0 +1,392 @@
+# Declarative VAL rules for BALL_VALVE_BRONZE (`docs/10-roadmap.md` M3 §11-§14).
+# Parsed by `infrastructure/val_resources.py` into `domain/val/rules_dsl.py`'s
+# `Condition` tree — never a string handed to `eval()` (`tests/architecture/
+# test_no_eval.py`).
+#
+# Every rule below is transcribed from a named, numbered rule in
+# `docs/domain/pvf-reference.md` §10 ("Validation rule starter set") or from the
+# domain-trap discussion in that same document's §4-§7 / CLAUDE.md's "Domain traps
+# (PVF)" table — both of which are OpenSpec's own already-reviewed domain
+# documentation, the same provenance discipline `resources/nrm/
+# connection_synonyms.yaml` (UH4) and `resources/cls/abbreviations.yaml` (M1)
+# already established for this project. **None of these numbers/lists are invented
+# here.**
+#
+# `docs/10-roadmap.md` M3's own target is >=60 rules across 5 classes. This file
+# ships 18, all against the one real, loaded class (`BALL_VALVE_BRONZE`,
+# `resources/taxonomy/classes.yaml`) — the other four PVF demo classes
+# (`docs/domain/pvf-reference.md` §2) have no taxonomy/schema loaded for them in
+# this environment (same standing gap `resources/policy/classification_rules.yaml`'s
+# own header documents for `CLS`), so there is no class to attach a rule to yet.
+# Reaching 60 real rules needs either those four classes' schemas or a richer
+# primary-source-verified rule catalogue than `pvf-reference.md` §10 currently
+# provides — `pvf-reference.md`'s own header flags OD-4 (`docs/decisions.md`) as
+# still open: "every rule below must be verified against primary sources... before
+# it is implemented". Padding this file to 60 with invented rules to hit a number
+# would be exactly the fabricated-business-rules failure mode `docs/10-roadmap.md`
+# M3 §11 explicitly forbids ("Do NOT blindly invent 60 arbitrary rules"). The five
+# `CLS-001-*` rules below are transcribed directly from `resources/taxonomy/
+# classes.yaml`'s own `allowed_values` lists (kept in sync by hand this milestone —
+# an automatic "rule generated from schema" step is a legitimate follow-up, not
+# built here) rather than counted as a second, independent rule source.
+schema_version: "1"
+rules:
+  # PRS-001 (§10): "Pressure values are numeric with a unit and a media." Split into
+  # one instance per pressure attribute so each is independently testable.
+  - rule_id: PRS-001-WOG
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [pressure_rating_wog]
+    description: "Pressure Rating (WOG), if present, must carry a magnitude, unit, and media."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 PRS-001"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: pressure_rating_wog
+        - op: AND
+          operands:
+            - op: EXISTS
+              field: pressure_rating_wog.magnitude
+            - op: EXISTS
+              field: pressure_rating_wog.unit
+            - op: EXISTS
+              field: pressure_rating_wog.media
+
+  - rule_id: PRS-001-WSP
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [pressure_rating_wsp]
+    description: "Pressure Rating (WSP), if present, must carry a magnitude, unit, and media."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 PRS-001"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: pressure_rating_wsp
+        - op: AND
+          operands:
+            - op: EXISTS
+              field: pressure_rating_wsp.magnitude
+            - op: EXISTS
+              field: pressure_rating_wsp.unit
+            - op: EXISTS
+              field: pressure_rating_wsp.media
+
+  # PRS-004 (§10, worked example in §6): "Brass/bronze ball valve WOG ∈ [125, 1000]
+  # psi." §6's own words: "Outside that range -> review" — FLAG, never BLOCK.
+  - rule_id: PRS-004
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [pressure_rating_wog, body_material]
+    description: "Brass/bronze ball valve WOG rating is typically within [125, 1000] psi; outside that range warrants review, not automatic rejection."
+    severity: FLAG
+    source: "docs/domain/pvf-reference.md §10 PRS-004, §6"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: pressure_rating_wog
+        - op: NOT_IN
+          field: body_material
+          values: [BRASS, BRONZE]
+        - op: AND
+          operands:
+            - op: GE
+              field: pressure_rating_wog.magnitude
+              value: 125
+            - op: LE
+              field: pressure_rating_wog.magnitude
+              value: 1000
+
+  # PRS-011 (§10): "WSP <= WOG when both present" — genuinely cross-field
+  # (`domain/val/crossfield.py`). Advisory, not a certainty (manufacturer-specific
+  # designs vary) -> FLAG.
+  - rule_id: PRS-011
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [pressure_rating_wsp, pressure_rating_wog]
+    description: "WSP rating should not exceed the WOG rating for the same valve, when both are stated."
+    severity: FLAG
+    source: "docs/domain/pvf-reference.md §10 PRS-011"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: pressure_rating_wsp
+        - op: NOT_EXISTS
+          field: pressure_rating_wog
+        - op: LE
+          field: pressure_rating_wsp.magnitude
+          value: { field: pressure_rating_wog.magnitude }
+
+  # PRS-017 (§10, §6): "PVC/CPVC ratings require a temperature qualifier." Not
+  # reachable via BALL_VALVE_BRONZE's own allowed body_material values today (no
+  # PVC/CPVC class is loaded in this environment) — real, generic, tested logic,
+  # honestly inert against this one fixture's data until a plastics class exists.
+  # §6: "incomplete -> Unknown or flagged" — FLAG chosen (keeps the raw value
+  # visible for review rather than erasing it).
+  - rule_id: PRS-017-WOG
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [pressure_rating_wog, body_material]
+    description: "PVC/CPVC pressure ratings require a stated temperature qualifier."
+    severity: FLAG
+    source: "docs/domain/pvf-reference.md §10 PRS-017, §6"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_IN
+          field: body_material
+          values: [PVC, CPVC]
+        - op: NOT_EXISTS
+          field: pressure_rating_wog
+        - op: EXISTS
+          field: pressure_rating_wog.temperature_qualifier
+
+  - rule_id: PRS-017-WSP
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [pressure_rating_wsp, body_material]
+    description: "PVC/CPVC pressure ratings require a stated temperature qualifier."
+    severity: FLAG
+    source: "docs/domain/pvf-reference.md §10 PRS-017, §6"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_IN
+          field: body_material
+          values: [PVC, CPVC]
+        - op: NOT_EXISTS
+          field: pressure_rating_wsp
+        - op: EXISTS
+          field: pressure_rating_wsp.temperature_qualifier
+
+  # SIZ-002 (§10): "Nominal size ∈ the standard NPS/DN series." The real NPS/DN
+  # *series* table doesn't exist in this environment (OD-4, `domain/nrm/
+  # nominal_size.py`'s `EMPTY_NPS_DN_EQUIVALENCE`) — this rule is scoped to what
+  # *is* verified: the size standard itself must be one of the three the domain
+  # type closes over. Defence in depth: `NominalSize.__post_init__` already
+  # guarantees this for any value built through the constructor; this rule catches
+  # a fact resolved from a raw, not-yet-typed source that bypassed it.
+  - rule_id: SIZ-002
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [nominal_size]
+    description: "Nominal size, if present, must use a recognised size standard (NPS, DN, or TUBE)."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 SIZ-002, §4"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: nominal_size
+        - op: IN
+          field: nominal_size.standard
+          values: [NPS, DN, TUBE]
+
+  # SIZ-005 (§10): "Size standard must be explicit when a size is present."
+  - rule_id: SIZ-005
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [nominal_size]
+    description: "A nominal size value must carry an explicit size standard."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 SIZ-005"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: nominal_size
+        - op: EXISTS
+          field: nominal_size.standard
+
+  # END-003 (§10): "Inlet and outlet are each from the canonical connection set."
+  # The canonical set itself is §5's own table — transcribed verbatim, the same
+  # provenance `domain/nrm/connections.py` and `resources/nrm/
+  # connection_synonyms.yaml` already use for the *synonym* side of this table.
+  - rule_id: END-003
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [end_connection_inlet]
+    description: "End connection (inlet), if present, must be one of the canonical connection types."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 END-003, §5"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: end_connection_inlet
+        - op: IN
+          field: end_connection_inlet
+          values:
+            [
+              NPT_FEMALE,
+              NPT_MALE,
+              SOLDER,
+              PRESS,
+              FLANGED,
+              GROOVED,
+              BUTT_WELD,
+              SOCKET_WELD,
+              COMPRESSION,
+              BARB,
+              SOLVENT_WELD,
+            ]
+
+  # END-007 (§10): "Solvent-weld connections only on plastic bodies." Real bite
+  # even on this fixture: a SOLVENT_WELD end connection asserted alongside a metal
+  # body_material (every value BALL_VALVE_BRONZE actually allows) is a genuine,
+  # catchable data error, not merely inert against this class's vocabulary.
+  - rule_id: END-007
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [end_connection_inlet, body_material]
+    description: "Solvent-weld end connections are only valid on plastic (PVC/CPVC) bodies."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 END-007, §5"
+    condition:
+      op: OR
+      operands:
+        - op: NE
+          field: end_connection_inlet
+          value: SOLVENT_WELD
+        - op: IN
+          field: body_material
+          values: [PVC, CPVC]
+
+  # TMP-002 (§10): "temperature_min < temperature_max." `temperature_range` here is
+  # a caller-resolved fact object exposing `.min`/`.max` — no NRM temperature
+  # parser exists in this codebase yet (temperature normalisation is M4 scope), so
+  # this rule is exercised against directly-constructed test facts, never against
+  # real extracted data, exactly like `nominal_size`'s own honest scope.
+  - rule_id: TMP-002
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [temperature_range]
+    description: "Temperature range minimum must be less than its maximum."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 TMP-002"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: temperature_range
+        - op: LT
+          field: temperature_range.min
+          value: { field: temperature_range.max }
+
+  # TMP-005 (§10): "PTFE seat max temp <= ~450°F (verify)." The document's own
+  # "(verify)" flags this number as not primary-source-confirmed (OD-4,
+  # `docs/decisions.md`) — capped at FLAG, never BLOCK, so an unverified number can
+  # never reject a value outright (CLAUDE.md: "a wrong validation rule silently
+  # corrupts every downstream number").
+  - rule_id: TMP-005
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [temperature_range, seat_material]
+    description: "PTFE seats are typically rated to roughly 450°F maximum (source figure unverified against a primary standard — OD-4)."
+    severity: FLAG
+    source: "docs/domain/pvf-reference.md §10 TMP-005 (marked \"verify\" in source; OD-4 open)"
+    condition:
+      op: OR
+      operands:
+        - op: NE
+          field: seat_material
+          value: PTFE
+        - op: NOT_EXISTS
+          field: temperature_range
+        - op: LE
+          field: temperature_range.max
+          value: 450
+
+  # MAT-004 (§10, §7): "Lead-free claim requires an NSF/372 or equivalent
+  # citation." §7's own words: an `-LF` part-number-suffix-derived claim "is
+  # INFERRED, not EXTRACTED, and Tier 0, so it goes to a human regardless" — INV-9
+  # already forces human approval for this Tier-0 attribute either way; this rule
+  # adds the specific, explainable reason a reviewer sees when the claim's
+  # provenance is exactly that weakest tier.
+  - rule_id: MAT-004
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [lead_free_compliance]
+    description: "A lead-free compliance claim inferred only from a part-number suffix (no direct document citation) warrants explicit review."
+    severity: FLAG
+    source: "docs/domain/pvf-reference.md §10 MAT-004, §7"
+    condition:
+      op: OR
+      operands:
+        - op: NE
+          field: lead_free_compliance
+          value: true
+        - op: NE
+          field: lead_free_compliance_provenance
+          value: INFERRED
+
+  # CLS-001 (§10): "Extracted attributes must not contradict the assigned class."
+  # For BALL_VALVE_BRONZE this reduces to closed-vocabulary membership per
+  # attribute — transcribed from `resources/taxonomy/classes.yaml`'s own
+  # `allowed_values` (see header comment).
+  - rule_id: CLS-001-BODY_MATERIAL
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [body_material]
+    description: "Body material must be one of the class's approved values."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 CLS-001; resources/taxonomy/classes.yaml body_material.allowed_values"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: body_material
+        - op: IN
+          field: body_material
+          values: [BRASS, BRONZE, CI, DUCTILE_IRON, CS, SS304, SS316]
+
+  - rule_id: CLS-001-SEAT_MATERIAL
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [seat_material]
+    description: "Seat material must be one of the class's approved values."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 CLS-001; resources/taxonomy/classes.yaml seat_material.allowed_values"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: seat_material
+        - op: IN
+          field: seat_material
+          values: [PTFE, RPTFE, PEEK, NYLON]
+
+  - rule_id: CLS-001-HANDLE_TYPE
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [handle_type]
+    description: "Handle type must be one of the class's approved values."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 CLS-001; resources/taxonomy/classes.yaml handle_type.allowed_values"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: handle_type
+        - op: IN
+          field: handle_type
+          values: [LEVER, TEE, OVAL, LOCKING]
+
+  - rule_id: CLS-001-POTABLE_WATER_LISTING
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [potable_water_listing]
+    description: "Potable water listing must be one of the class's approved values."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 CLS-001; resources/taxonomy/classes.yaml potable_water_listing.allowed_values"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: potable_water_listing
+        - op: IN
+          field: potable_water_listing
+          values: [NSF_61, NONE]
+
+  - rule_id: CLS-001-ANSI_CLASS
+    class_codes: [BALL_VALVE_BRONZE]
+    attributes: [ansi_class]
+    description: "ANSI class must be one of the class's approved values."
+    severity: BLOCK
+    source: "docs/domain/pvf-reference.md §10 CLS-001; resources/taxonomy/classes.yaml ansi_class.allowed_values"
+    condition:
+      op: OR
+      operands:
+        - op: NOT_EXISTS
+          field: ansi_class
+        - op: IN
+          field: ansi_class
+          values: ["125", "150", "300", "600"]

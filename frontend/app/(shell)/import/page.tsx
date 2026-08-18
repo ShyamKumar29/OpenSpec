@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/shell/page-header";
 import { PageContainer } from "@/components/shell/page-container";
-import { InProgressState } from "@/components/state/in-progress";
+import { ImportView } from "@/components/import/import-view";
 
 export const metadata: Metadata = { title: "Import" };
 
@@ -10,13 +10,10 @@ export default function ImportPage() {
     <>
       <PageHeader
         title="Import"
-        description="Upload, column mapping, validation preview, progress."
+        description="Ingest catalog records for enrichment — upload, column mapping, validation preview, progress."
       />
       <PageContainer>
-        <InProgressState
-          phase="F6"
-          note="Drag/drop upload, column mapping, and row-level validation land in F6 (demo beat 1)."
-        />
+        <ImportView />
       </PageContainer>
     </>
   );

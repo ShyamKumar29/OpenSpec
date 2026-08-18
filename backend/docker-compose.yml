@@ -1,0 +1,45 @@
+# Local/demo topology (docs/02-architecture.md §12.1). `docker compose up` should be
+# the entire onboarding story once the services below are wired to real code —
+# they aren't yet (see docs/15-backend-implementation-status.md): `api` and `worker`
+# point at Dockerfiles that don't exist in this milestone, and are commented out
+# rather than left to fail confusingly. `postgres` alone is real and startable today,
+# which is the actual next step for running the Alembic migration this project
+# still needs (`infrastructure/db/models.py` is the schema; there is no migration
+# runner wired to it yet).
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: openspec
+      POSTGRES_PASSWORD: openspec
+      POSTGRES_DB: openspec
+    ports:
+      - "5432:5432"
+    volumes:
+      - openspec_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openspec"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # api:
+  #   build: .
+  #   command: uvicorn openspec.api.main:app --host 0.0.0.0 --port 8000
+  #   environment:
+  #     OPENSPEC_REPOSITORY_BACKEND: postgres
+  #     OPENSPEC_DATABASE_URL: postgresql+psycopg://openspec:openspec@postgres/openspec
+  #   ports: ["8000:8000"]
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #
+  # worker:
+  #   build: .
+  #   command: python -m openspec.worker.main
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+volumes:
+  openspec_pgdata:

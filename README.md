@@ -23,8 +23,19 @@ source**, and returns `Unknown` when the evidence isn't there.
 
 ## Status
 
-**Planning complete. Implementation not started.**
-This repository currently contains the full architecture, requirements, and delivery plan.
+**M0 and M1 (classification, schema resolution, evaluation harness) complete against their
+documented checklists; real classification/evaluation accuracy blocked on the same missing gold
+set and LOV reference pack M0 already documented — see
+[`docs/15-backend-implementation-status.md`](docs/15-backend-implementation-status.md) §15–§16.**
+`backend/` runs today: a FastAPI app, an in-memory dev repository, CSV import with column mapping
+and per-row error reporting, a designed-and-DDL-verified Postgres schema with its first Alembic
+migration, a deterministic + LLM-residual classifier validated against a closed taxonomy, a schema
+resolver, a full evaluation harness (`make eval`) that runs end-to-end against real pipeline
+predictions and honestly reports `GOLD_SET_UNAVAILABLE` rather than a fabricated accuracy number,
+and 572 passing tests (5 skipped, Postgres-dependent). `frontend/` has a full UI (catalog,
+documents, review queue, Judge Mode) built against a mock HTTP layer, ready to point at the real
+backend once the pipeline stages that produce enriched data (`M2`–`M6`) exist. Next up: `M2` —
+parsing, document binding, and the `DocumentViewer`, per [`docs/10-roadmap.md`](docs/10-roadmap.md).
 
 ---
 
@@ -83,12 +94,17 @@ Rationale for every choice is in [`docs/02-architecture.md`](docs/02-architectur
 
 ---
 
-## Planned commands
+## Commands
 
 ```bash
-make up        # postgres, minio, backend, worker, frontend
-make seed      # load taxonomy, rules, units (idempotent)
-make test      # unit + architecture + integration
-make eval      # evaluation harness → metrics, frontier chart, calibration diagram
-make demo      # restore the verified demo snapshot
+make up        # docker compose: postgres (backend/worker/frontend containers land with their Dockerfiles)
+make seed      # load taxonomy into Postgres (idempotent) — needs OPENSPEC_DATABASE_URL
+make test      # backend: ruff + mypy --strict + pytest · frontend: typecheck + lint + unit tests
+make eval      # real predictions scored against the gold set — honestly reports
+               # GOLD_SET_UNAVAILABLE today; no real gold set exists yet (M1, docs/10-roadmap.md)
+make demo      # not built yet — demo-snapshot tooling lands at M6 (docs/10-roadmap.md)
 ```
+
+No Docker/Postgres in this repository's own development sandbox — `backend/` runs today against an
+in-memory dev repository (`OPENSPEC_REPOSITORY_BACKEND=memory`, the default) with no external
+dependencies: `cd backend && make install && make run`.

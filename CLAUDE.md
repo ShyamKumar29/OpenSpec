@@ -116,7 +116,8 @@ make snapshot      # capture a verified demo snapshot
 
 `ING` ingest · `CLS` classify · `SCH` schema · `DOC` document binding · `PRS` parse ·
 `EXT` extract · `VER` verify · `VAL` validate · `NRM` normalise · `CNF` confidence ·
-`PRV` provenance · `RVW` review · `PUB` publish · `EVL` evaluation
+`PRV` provenance · `RVW` review · `PUB` publish · `EVL` evaluation · `RES` manufacturer/brand resolution ·
+`DSC` description construction
 
 ---
 
@@ -135,7 +136,7 @@ make snapshot      # capture a verified demo snapshot
 | CI, deploy, environments | `docs/07-devops.md` |
 | Threats and controls | `docs/08-security.md` |
 | Test suites and gates | `docs/09-testing.md` |
-| What to build next | `docs/10-roadmap.md`, `docs/13-implementation-blueprint.md` |
+| What to build next | `docs/16-unilog-alignment.md` (UH0–UH7, current), then `docs/10-roadmap.md`, `docs/13-implementation-blueprint.md` |
 | Why a decision was made | `docs/decisions.md`, `docs/adr/` |
 
 ---

@@ -1,0 +1,3 @@
+record_id,field,expected_value,expected_unknown_reason,is_real
+r1,MFG_PART_NUM,ABC-123,,true
+r1,MFG_PART_NUM,DUPLICATE-ROW,,true

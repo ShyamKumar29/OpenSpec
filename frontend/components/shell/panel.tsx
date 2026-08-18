@@ -73,7 +73,11 @@ export function PanelHeader({
       )}
       {...props}
     >
-      <As className="label-caps text-foreground/80 min-w-0 truncate">{title}</As>
+      {/* `opacity-80`, not `text-foreground/80`: the header inherits its colour from the
+          panel (or from an override on this element, e.g. the judge console's chrome-filled
+          header), and pinning the title to the page foreground made it black-on-black
+          there. Opacity keeps the identical appearance on a normal surface panel. */}
+      <As className="label-caps min-w-0 truncate opacity-80">{title}</As>
       {actions ? <div className="flex shrink-0 items-center gap-1.5">{actions}</div> : null}
       {children}
     </div>

@@ -8,6 +8,8 @@ import { RecordTable } from "./record-table";
 import { CatalogExportButton } from "./export-dialog";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelBody, PanelHeader } from "@/components/shell/panel";
+import { PageHeader } from "@/components/shell/page-header";
+import { PageContainer } from "@/components/shell/page-container";
 import { LoadingTable } from "@/components/state/loading";
 import { ErrorState } from "@/components/state/error-state";
 import { EmptyState } from "@/components/state/empty-state";
@@ -41,91 +43,103 @@ export function CatalogView() {
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
-  // Two-pane workspace, per the Stitch catalog screen: a persistent "Filter Parameters"
-  // rail on the left and the record table filling the rest. The split starts at `xl`
-  // rather than `lg` because the seven-column record table needs the full content width
-  // below 1280px; under that the rail stacks above the table rather than collapsing
-  // behind a control, so the filters stay one tap away on a tablet (docs/06-frontend.md §9).
+  function clearFilters() {
+    handleFiltersChange({
+      ...filters,
+      q: "",
+      classCode: null,
+      status: null,
+      completenessLt: null,
+      supplier: null,
+      hasUnknownReason: false,
+    });
+  }
+
+  const active = hasActiveCatalogFilters(filters);
+
+  // The Stitch catalog header states the size of the result set directly under the title
+  // ("14,203 Records · 89% Validation Rate"). The equivalent true statement here is what
+  // the cursor-paginated query can actually vouch for — how many records are loaded, and
+  // whether more remain. Inventing a total the API does not return would be the exact
+  // class of unsourced number this product exists to refuse.
+  const description =
+    query.status === "success"
+      ? `${records.length}${query.hasNextPage ? "+" : ""} record${records.length === 1 ? "" : "s"} loaded` +
+        (active ? " · filtered" : "")
+      : "Searchable, filterable record list.";
+
   return (
-    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:gap-5">
-      <Panel as="aside" className="shrink-0 xl:sticky xl:top-24 xl:w-60">
-        <PanelHeader title="Filter parameters" as="h2" />
-        <PanelBody>
-          <FilterBar filters={filters} onChange={handleFiltersChange} />
-        </PanelBody>
-      </Panel>
-
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-muted-foreground metric text-xs">
-            {records.length} record{records.length === 1 ? "" : "s"} loaded
-            {query.hasNextPage ? " — more available" : ""}
-          </p>
-          <CatalogExportButton filters={filters} />
-        </div>
-
-        {query.status === "pending" ? (
-          <LoadingTable rows={10} columns={7} />
-        ) : query.status === "error" ? (
-          <ErrorState error={query.error} onRetry={() => query.refetch()} />
-        ) : records.length === 0 ? (
-          <EmptyState
-            icon={PackageSearch}
-            title={
-              hasActiveCatalogFilters(filters) ? "No records match these filters" : "No records yet"
-            }
-            description={
-              hasActiveCatalogFilters(filters)
-                ? "Try widening the class, status, or completeness filter, or clear search."
-                : "Import a CSV or XLSX file to populate the catalog."
-            }
-            action={
-              hasActiveCatalogFilters(filters) ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    handleFiltersChange({
-                      ...filters,
-                      q: "",
-                      classCode: null,
-                      status: null,
-                      completenessLt: null,
-                      supplier: null,
-                      hasUnknownReason: false,
-                    })
-                  }
-                >
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          <>
-            <RecordTable
-              records={records}
-              filters={filters}
-              onFiltersChange={handleFiltersChange}
-              hasNextPage={query.hasNextPage}
-              isFetchingNextPage={query.isFetchingNextPage}
-              fetchNextPage={() => query.fetchNextPage()}
+    <>
+      <PageHeader
+        title="Catalog"
+        description={description}
+        actions={<CatalogExportButton filters={filters} />}
+      />
+      <PageContainer>
+        {/* Two-pane workspace, per the Stitch catalog screen: a persistent "Filter
+            Parameters" rail on the left and the record table filling the rest. The split
+            starts at `xl` rather than `lg` because the seven-column record table needs the
+            full content width below 1280px; under that the rail stacks above the table
+            rather than collapsing behind a control, so the filters stay one tap away on a
+            tablet (docs/06-frontend.md §9). */}
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:gap-5">
+          <Panel as="aside" className="shrink-0 xl:sticky xl:top-24 xl:w-64">
+            <PanelHeader
+              title="Filter parameters"
+              as="h2"
+              actions={
+                active ? (
+                  <Button
+                    variant="link"
+                    size="xs"
+                    className="text-muted-foreground h-auto px-0 py-0 text-xs"
+                    onClick={clearFilters}
+                  >
+                    Reset
+                  </Button>
+                ) : null
+              }
             />
-            {query.hasNextPage ? (
-              <div className="flex justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => query.fetchNextPage()}
-                  disabled={query.isFetchingNextPage}
-                >
-                  {query.isFetchingNextPage ? "Loading…" : "Load more"}
-                </Button>
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
-    </div>
+            <PanelBody>
+              <FilterBar filters={filters} onChange={handleFiltersChange} />
+            </PanelBody>
+          </Panel>
+
+          <div className="min-w-0 flex-1">
+            {query.status === "pending" ? (
+              <LoadingTable rows={10} columns={7} />
+            ) : query.status === "error" ? (
+              <ErrorState error={query.error} onRetry={() => query.refetch()} />
+            ) : records.length === 0 ? (
+              <EmptyState
+                icon={PackageSearch}
+                title={active ? "No records match these filters" : "No records yet"}
+                description={
+                  active
+                    ? "Try widening the class, status, or completeness filter, or clear search."
+                    : "Import a CSV or XLSX file to populate the catalog."
+                }
+                action={
+                  active ? (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  ) : undefined
+                }
+              />
+            ) : (
+              <RecordTable
+                records={records}
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+                hasNextPage={query.hasNextPage}
+                isFetchingNextPage={query.isFetchingNextPage}
+                fetchNextPage={() => query.fetchNextPage()}
+              />
+            )}
+          </div>
+        </div>
+      </PageContainer>
+    </>
   );
 }

@@ -111,6 +111,59 @@ describe("JudgeView", () => {
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
 
+  it("runs the engine console and the emerging record while in flight, and the result panel only once settled", async () => {
+    judgeRunMutateMock.mockImplementation((_input, opts) => opts.onSuccess("judge_run_success"));
+    runStreamMock.mockReturnValue(
+      mockRunStreamHookResult(
+        streamState({
+          phase: "running",
+          stages: {
+            ...initialRunStreamState().stages,
+            CLS: { ...initialRunStreamState().stages.CLS, state: "running" },
+          },
+        }),
+      ),
+    );
+
+    render(<JudgeView />);
+    await userEvent.click(screen.getByRole("button", { name: /Success/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Run" }));
+
+    expect(screen.getByTestId("engine-console")).toBeInTheDocument();
+    expect(screen.getByTestId("emerging-record")).toBeInTheDocument();
+    expect(screen.queryByTestId("live-result-panel")).not.toBeInTheDocument();
+  });
+
+  it("freezes the pipeline's motion once the run has settled", async () => {
+    judgeRunMutateMock.mockImplementation((_input, opts) => opts.onSuccess("judge_run_success"));
+    judgeRunDetailQueryMock.mockReturnValue({ status: "success", data: DETAIL });
+    recordDetailQueryMock.mockReturnValue({
+      status: "success",
+      data: { mpnRaw: "ABC-123", attributes: [] },
+    });
+    // A run cancelled mid-stage leaves CLS in `running` forever — nothing on the page may
+    // go on animating as though work were still happening.
+    runStreamMock.mockReturnValue(
+      mockRunStreamHookResult(
+        streamState({
+          phase: "cancelled",
+          stages: {
+            ...initialRunStreamState().stages,
+            CLS: { ...initialRunStreamState().stages.CLS, state: "running" },
+          },
+        }),
+      ),
+    );
+
+    render(<JudgeView />);
+    await userEvent.click(screen.getByRole("button", { name: /Success/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Run" }));
+
+    const spinners = document.querySelectorAll(".animate-spin");
+    expect(spinners).toHaveLength(0);
+    expect(screen.getByTestId("live-result-panel")).toBeInTheDocument();
+  });
+
   it("Cancel closes the stream and persists the cancellation server-side", async () => {
     judgeRunMutateMock.mockImplementation((_input, opts) => opts.onSuccess("judge_run_success"));
     const cancel = vi.fn();

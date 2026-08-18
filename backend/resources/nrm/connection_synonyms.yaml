@@ -1,0 +1,37 @@
+# End-connection synonym table (`NRM`, docs/domain/pvf-reference.md §5 — "End
+# connections, trap #2"). Transcribed verbatim from that already-reviewed
+# project document, not from any client-supplied file — this is OpenSpec's
+# own documented domain knowledge, unlike the Fittings/Faucets LOV canonical
+# mappings (which genuinely are client data and remain blocked, see
+# infrastructure/reference_data/missing_datasets.py).
+#
+# ⚠ Per pvf-reference.md's own status line, every rule here is "authored from
+# general industry knowledge... must be verified against primary sources
+# (MSS SP-110, ASME B16 series, manufacturer catalogs) before it is
+# implemented as a validation or normalisation rule" (OD-4, docs/decisions.md,
+# still open). Treated here as a normalisation *candidate* table, not a
+# certified rule.
+schema_version: "1"
+canonical_connections:
+  - canonical: NPT_FEMALE
+    synonyms: [FNPT, FIP, "NPT-F", THRD-F, "female threaded", "IPS female"]
+  - canonical: NPT_MALE
+    synonyms: [MNPT, MIP, "NPT-M", "male threaded"]
+  - canonical: SOLDER
+    synonyms: ["C×C", CxC, SWT, sweat, "solder cup", "copper socket"]
+  - canonical: PRESS
+    synonyms: [ProPress, "press-fit", "press connect"]
+  - canonical: FLANGED
+    synonyms: [FLG, "ANSI flange", "150# flange"]
+  - canonical: GROOVED
+    synonyms: ["Victaulic-style", "roll groove", "cut groove"]
+  - canonical: BUTT_WELD
+    synonyms: [BW]
+  - canonical: SOCKET_WELD
+    synonyms: [SW]
+  - canonical: COMPRESSION
+    synonyms: [comp, ferrule]
+  - canonical: BARB
+    synonyms: [insert, "hose barb"]
+  - canonical: SOLVENT_WELD
+    synonyms: [slip, "socket (PVC context)"]

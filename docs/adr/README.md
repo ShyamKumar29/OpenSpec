@@ -49,5 +49,7 @@ The **Revisit when** field is what stops an ADR becoming dogma. Never omit it.
 | [0008](ADR-0008-composite-confidence.md) | Composite calibrated confidence, not model self-report | Accepted |
 | [0009](ADR-0009-risk-tiers.md) | Attribute risk tiers with a Tier-0 human gate | Accepted |
 | [0010](ADR-0010-export-adapter.md) | Export behind an adapter; CX1 as one target | Accepted |
-| [0011](ADR-0011-own-taxonomy-subset.md) | Hand-authored taxonomy subset, ETIM-compatible | Accepted |
+| [0011](ADR-0011-own-taxonomy-subset.md) | Hand-authored taxonomy subset, ETIM-compatible | Accepted (scope narrowed by 0014) |
 | [0012](ADR-0012-server-side-rasterisation.md) | Server-side PDF page rasterisation | Accepted |
+| [0013](ADR-0013-templated-description-generation.md) | Templated multi-format description generation, in scope | Accepted |
+| [0014](ADR-0014-unilog-vocabulary-adoption.md) | Adopt Unilog LOV/manufacturer vocabulary for demo classes | Accepted, supersedes 0011 |

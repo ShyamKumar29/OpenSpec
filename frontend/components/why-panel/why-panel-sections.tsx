@@ -28,22 +28,53 @@ import type {
 } from "@/lib/contracts/explain";
 import { cn } from "@/lib/utils";
 
+/**
+ * One section of the panel.
+ *
+ * `step` renders the Stitch "Extraction Reasoning" treatment: a numbered marker on a
+ * vertical spine, so the four reasoning stages read as an ordered derivation rather than
+ * four unrelated blocks. The numeral lives in an `aria-hidden` marker beside the heading,
+ * never inside it — the heading's accessible name stays exactly "Evidence",
+ * "Verification", … which is both the correct outline and what the evidence-flow E2E test
+ * scopes its assertions to. `caption` carries the fuller descriptive name Stitch prints
+ * under each step.
+ */
 export function Section({
   title,
+  caption,
+  step,
   children,
   className,
 }: {
   title: string;
+  caption?: string;
+  step?: number;
   children: React.ReactNode;
   className?: string;
 }) {
+  const stepped = step !== undefined;
   return (
     <section
-      className={cn("flex flex-col gap-1.5 border-t pt-3 first:border-t-0 first:pt-0", className)}
+      className={cn(
+        "flex flex-col gap-1.5",
+        stepped
+          ? "border-border/70 relative border-l pb-4 pl-5 last:border-transparent last:pb-0"
+          : "border-t pt-3 first:border-t-0 first:pt-0",
+        className,
+      )}
     >
+      {stepped ? (
+        <span
+          aria-hidden="true"
+          className="border-border bg-card metric text-foreground absolute top-0 -left-[0.8125rem] flex size-[1.625rem] items-center justify-center rounded-full border text-xs font-semibold"
+        >
+          {step}
+        </span>
+      ) : null}
       <h3 className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
         {title}
       </h3>
+      {caption ? <p className="text-foreground -mt-1 text-sm font-medium">{caption}</p> : null}
       {children}
     </section>
   );
@@ -68,7 +99,7 @@ export function EvidenceSection({
 }) {
   if (value.status === "UNKNOWN") {
     return (
-      <Section title="Evidence">
+      <Section title="Evidence" caption="Evidence identification" step={1}>
         <UnknownValue reason={value.unknownReason} />
       </Section>
     );
@@ -76,7 +107,7 @@ export function EvidenceSection({
 
   if (evidence.length === 0) {
     return (
-      <Section title="Evidence">
+      <Section title="Evidence" caption="Evidence identification" step={1}>
         <p className="text-muted-foreground text-xs">
           No evidence is recorded for this value — this would itself be a contract violation
           (INV-1); if you see this, something upstream is inconsistent.
@@ -86,7 +117,7 @@ export function EvidenceSection({
   }
 
   return (
-    <Section title="Evidence">
+    <Section title="Evidence" caption="Evidence identification" step={1}>
       <div className="flex flex-col gap-3">
         {evidence.map((e, i) => (
           <dl
@@ -152,7 +183,7 @@ export function EvidenceSection({
 
 export function VerificationSection({ verification }: { verification: Verification | null }) {
   return (
-    <Section title="Verification">
+    <Section title="Verification" caption="Semantic verification" step={2}>
       {verification ? (
         <>
           <p
@@ -183,7 +214,7 @@ export function VerificationSection({ verification }: { verification: Verificati
 
 export function ValidationSection({ rules }: { rules: ValidationRule[] }) {
   return (
-    <Section title="Validation">
+    <Section title="Validation" caption="Constraint validation" step={3}>
       {rules.length === 0 ? (
         <p className="text-muted-foreground text-xs">No validation rules were evaluated.</p>
       ) : (
@@ -218,7 +249,7 @@ export function ValidationSection({ rules }: { rules: ValidationRule[] }) {
 
 export function NormalisationSection({ steps }: { steps: TransformStep[] }) {
   return (
-    <Section title="Normalisation">
+    <Section title="Normalisation" caption="Unit &amp; format normalisation" step={4}>
       {steps.length === 0 ? (
         <p className="text-muted-foreground text-xs">
           No transform chain — no value was asserted to normalise.

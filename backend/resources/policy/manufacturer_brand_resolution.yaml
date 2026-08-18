@@ -1,0 +1,31 @@
+# Deterministic thresholds for `RES` (manufacturer/brand resolution, UH2 —
+# docs/16-unilog-alignment.md G3). Configuration, never literals in code
+# (CLAUDE.md Conventions table: "Thresholds & policies: Configuration, never
+# literals in code"). Loaded by infrastructure/resolution_policy.py into
+# application/usecases/resolve_manufacturer_brand.py's ResolutionPolicy.
+#
+# These values are conservative starting points, not calibrated against real
+# outcomes: no manufacturer/brand resolution has ever run against real
+# reference data in this environment — the approved workbook
+# (UniCat_Manufacturer_and_Brand_List.xlsx) is missing, see
+# infrastructure/reference_data/manufacturer_brand_list.py. Recalibrate once
+# real match/mismatch outcomes exist to score against
+# (docs/16-unilog-alignment.md UH2 "Done when" — accuracy with a confidence
+# interval against the gold set's MANUFACTURER_NAME/BRAND_NAME columns).
+schema_version: "1"
+
+# Deterministic tiers (exact / normalized-exact / alias) are unambiguous
+# string-equality matches against an approved reference row. INV-2's
+# independent verification pass is the deterministic string-equality check
+# itself (mirrors the "LOV membership check" docs/16-unilog-alignment.md UH4
+# describes as VER's deterministic pre-check) — ACCEPTED is reachable here.
+exact_confidence: 0.99
+normalized_exact_confidence: 0.95
+alias_confidence: 0.90
+
+# FUZZY tier: never auto-accepted regardless of score (UH2 brief §4 — "Fuzzy
+# tier logs its match score as a signal ... never auto-accepted at fuzzy tier
+# alone"). These two knobs only decide whether a fuzzy match becomes
+# NEEDS_REVIEW at all, or is discarded / treated as an unresolved tie.
+fuzzy_accept_floor: 0.60 # below this similarity, treat as no candidate at all
+fuzzy_ambiguity_delta: 0.05 # top-two candidates scoring within this of each other => no clear leader

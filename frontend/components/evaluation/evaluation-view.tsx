@@ -66,19 +66,11 @@ export function EvaluationView() {
           />
         ) : (
           <>
-            <DashboardCard
-              icon={GitCompareArrows}
-              title="Run history"
-              description="Every eval run, most recent first, with the delta against the previous run."
-              requirement="FR-EVL — historical comparison"
-            >
-              <RunHistoryTable
-                runs={runsQuery.data}
-                selectedRunId={selectedRunId ?? ""}
-                pathname={pathname}
-              />
-            </DashboardCard>
-
+            {/* Section order follows the Stitch evaluation screen: the headline numbers
+                first, then the charts that explain them, then the per-slice and ablation
+                detail, and the run history last. It previously opened with the run-history
+                table, which made the first thing on a quality page a list of ids rather
+                than the quality itself. */}
             {detailQuery.status === "pending" ? (
               <LoadingCard />
             ) : detailQuery.status === "error" ? (
@@ -137,6 +129,19 @@ export function EvaluationView() {
                 </DashboardCard>
               </>
             )}
+
+            <DashboardCard
+              icon={GitCompareArrows}
+              title="Run history"
+              description="Every eval run, most recent first, with the delta against the previous run."
+              requirement="FR-EVL — historical comparison"
+            >
+              <RunHistoryTable
+                runs={runsQuery.data}
+                selectedRunId={selectedRunId ?? ""}
+                pathname={pathname}
+              />
+            </DashboardCard>
           </>
         )}
       </PageContainer>

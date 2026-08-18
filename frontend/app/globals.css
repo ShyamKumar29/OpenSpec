@@ -385,6 +385,108 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Judge Mode enrichment console (`components/judge/engine-console.tsx`).
+
+   The Stitch Judge Mode screen's centre pane is a live processing console: a pulsing
+   frame around the active engine, a slowly rotating targeting reticle and scan sweep
+   behind the log, and a typing caret at the head of the stream. All of it is bound to
+   real run state in the components — the frame pulse and the backdrop exist only while a
+   run is genuinely in flight, and the caret only while the reveal cursor still has a line
+   to type. None of it encodes information (every state is also stated in words), so all
+   of it is safe to switch off entirely under reduced motion.
+   --------------------------------------------------------------------------- */
+@keyframes os-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes os-engine-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Stitch's `pulseBorder` — the active pane breathing against its own frame. Expressed as
+   an inset ring rather than `border-color` so it composes with whatever border the panel
+   already carries in either theme. */
+@keyframes os-engine-frame {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 18%, transparent);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 55%, transparent);
+  }
+}
+
+@keyframes os-reticle {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes os-scanline {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(600%);
+  }
+}
+
+@layer utilities {
+  .os-caret {
+    animation: os-caret 1.05s step-end infinite;
+  }
+  .os-engine-pulse {
+    animation: os-engine-pulse 2.2s ease-in-out infinite;
+  }
+  .os-engine-frame {
+    animation: os-engine-frame 2.4s ease-in-out infinite;
+  }
+  .os-reticle {
+    animation: os-reticle 26s linear infinite;
+  }
+  .os-scanline {
+    animation: os-scanline 6s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-caret,
+  .os-engine-pulse,
+  .os-engine-frame,
+  .os-reticle,
+  .os-scanline {
+    animation: none;
+  }
+  /* The caret is a position marker, not decoration — it stays lit, it just stops
+     blinking. The scan sweep carries nothing, so it goes. */
+  .os-caret {
+    opacity: 1;
+  }
+  .os-scanline {
+    opacity: 0;
+  }
+  .os-engine-frame {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 45%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .os-flow,
   .os-core-pulse,

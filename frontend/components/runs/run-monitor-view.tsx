@@ -8,12 +8,15 @@
  * deterministic script, live.
  */
 import { useEffect, useState } from "react";
+import { ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shell/page-header";
 import { PageContainer } from "@/components/shell/page-container";
+import { Panel, PanelBody, PanelHeader } from "@/components/shell/panel";
 import { LoadingBlock, LoadingCard } from "@/components/state/loading";
 import { ErrorState } from "@/components/state/error-state";
 import { StageTimeline } from "@/components/judge/stage-timeline";
+import { StageStepper } from "@/components/judge/stage-stepper";
 import { LiveStatsBar } from "@/components/judge/live-stats-bar";
 import { LiveResultPanel } from "@/components/judge/live-result-panel";
 import { useRunDetailQuery, useRunCancelMutation } from "@/lib/queries/runs";
@@ -108,8 +111,38 @@ export function RunMonitorView({ id }: { id: string }) {
         }
       />
       <PageContainer>
-        <div className="flex flex-col gap-3">
-          <StageTimeline stages={runStream.state.stages} notesSource={run.stages} />
+        {/* There is no Stitch screen for `/runs/:id`, so nothing here is invented for it:
+            the composition is Judge Mode's, minus the panes a already-finished run has no
+            use for (there is no input to submit and no third column to fill). Same stepper,
+            same timeline, same stage vocabulary, same result panel — a reviewer arriving
+            from "View in Run Monitor" lands on a screen that reads the same way. */}
+        <div className="flex flex-col gap-4">
+          <StageStepper stages={runStream.state.stages} frozen={!isRunning} />
+
+          <Panel>
+            <PanelHeader
+              title={
+                <span className="flex items-center gap-1.5">
+                  <ScanSearch className="size-3.5" aria-hidden="true" />
+                  {isRunning ? "Enrichment engine — active" : "Enrichment engine"}
+                </span>
+              }
+              as="h2"
+              className="bg-chrome text-chrome-foreground border-chrome-border"
+              actions={
+                <span className="metric text-chrome-foreground/70 max-w-52 truncate text-xs">
+                  {run.id}
+                </span>
+              }
+            />
+            <PanelBody className="p-2">
+              <StageTimeline
+                stages={runStream.state.stages}
+                notesSource={run.stages}
+                frozen={!isRunning}
+              />
+            </PanelBody>
+          </Panel>
 
           <LiveStatsBar
             liveExtracted={runStream.state.liveExtracted}
@@ -119,21 +152,24 @@ export function RunMonitorView({ id }: { id: string }) {
           />
 
           {isTerminalPhase(phase) ? (
-            <LiveResultPanel
-              phase={phase as "completed" | "failed" | "cancelled" | "timed_out"}
-              run={run}
-              totals={{
-                liveExtracted: runStream.state.liveExtracted,
-                liveUnknown: runStream.state.liveUnknown,
-                liveRejected: runStream.state.liveRejected,
-              }}
-              elapsedMs={sumStageDurations(run.stages)}
-              costSoFar={runStream.state.costSoFar}
-              onRunAgain={() => setAttempt((a) => a + 1)}
-              runAgainLabel="Replay narration"
-              context={run.kind === "judge" ? "judge" : "monitor"}
-              hideRunMonitorLink
-            />
+            <Panel>
+              <PanelHeader title="Result" as="h2" />
+              <LiveResultPanel
+                phase={phase as "completed" | "failed" | "cancelled" | "timed_out"}
+                run={run}
+                totals={{
+                  liveExtracted: runStream.state.liveExtracted,
+                  liveUnknown: runStream.state.liveUnknown,
+                  liveRejected: runStream.state.liveRejected,
+                }}
+                elapsedMs={sumStageDurations(run.stages)}
+                costSoFar={runStream.state.costSoFar}
+                onRunAgain={() => setAttempt((a) => a + 1)}
+                runAgainLabel="Replay narration"
+                context={run.kind === "judge" ? "judge" : "monitor"}
+                hideRunMonitorLink
+              />
+            </Panel>
           ) : null}
         </div>
       </PageContainer>

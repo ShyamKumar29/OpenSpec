@@ -1,0 +1,13 @@
+# Deterministic routing threshold for `CNF` (UH6 — docs/16-unilog-alignment.md
+# UH6: "CNF composite scoring calibrated on the combined gold set").
+# Configuration, never a literal in code (CLAUDE.md Conventions table).
+#
+# `accept_threshold` is a conservative starting point, not calibrated against
+# real outcomes: no gold set exists in this environment (UH0's still-open
+# gap, docs/15-backend-implementation-status.md §7) to fit it against.
+# Recalibrate once `eval_result` outcomes exist to score against — the same
+# "recalibrate once real data exists" caveat
+# resources/policy/manufacturer_brand_resolution.yaml already carries for
+# UH2's thresholds.
+schema_version: "1"
+accept_threshold: 0.85

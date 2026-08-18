@@ -1,0 +1,31 @@
+# Deterministic classification rules (`CLS`, M1 — docs/10-roadmap.md M1).
+# Each rule fires when every keyword *group* has at least one member present
+# in the abbreviation-expanded product text (`resources/cls/abbreviations.yaml`).
+# A group is an OR-set — e.g. "ball valve AND (brass OR bronze)" — so one rule
+# covers every accepted material spelling without duplicating the rule.
+#
+# `BALL_VALVE_BRONZE` is the only class this file targets today because it is
+# the only class actually loaded by `resources/taxonomy/classes.yaml`
+# (ADR-0011's hand-authored architecture-test fixture — ADR-0014 demoted it
+# from a client-scored category, but it remains real, project-owned data this
+# rule set can be run against for real, unlike the two paragraphs below).
+#
+# Fittings/Faucets category-level rules are deliberately NOT added here. The
+# only source that would tell us the client's real classification vocabulary
+# for those two categories is the still-missing Unicat LOV workbook
+# (`resources/policy/category_scope.yaml`'s own header comment,
+# `infrastructure/reference_data/missing_datasets.py`); inventing plausible
+# keyword rules for a client category would be exactly the fabricated-
+# reference-data failure mode CLAUDE.md and docs/16-unilog-alignment.md
+# forbid. `application/usecases/classify_record.py` is class-set-agnostic —
+# it accepts whatever `known_class_codes` a caller supplies — so this file
+# grows (or a second one is added) once that source exists, with zero code
+# change (mirrors ADR-0014's "adding a class is data, not code" claim,
+# already proven for `SCH` in UH6, docs/16-unilog-alignment.md UH6).
+schema_version: "1"
+rules:
+  - class_code: BALL_VALVE_BRONZE
+    confidence: 0.9
+    required_keyword_groups:
+      - ["ball valve"]
+      - ["brass", "bronze"]
