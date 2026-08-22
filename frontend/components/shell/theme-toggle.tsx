@@ -13,11 +13,13 @@ export function ThemeToggle() {
 
   return (
     <Button
+      suppressHydrationWarning
       variant="ghost"
       size="icon"
       aria-label={resolvedTheme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
       className="size-8"
+      
     >
       <Sun className="size-4 dark:hidden" aria-hidden="true" />
       <Moon className="hidden size-4 dark:block" aria-hidden="true" />

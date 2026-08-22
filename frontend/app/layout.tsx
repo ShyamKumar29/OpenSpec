@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   description: "Verification-first product-data enrichment for industrial distribution.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
@@ -44,6 +44,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${hankenGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        <div className="bg-red-600 text-white text-center py-2 font-bold text-sm tracking-wider w-full uppercase">
+          ⚠️ DEMO MODE / USING FIXTURE DATA (M3 Baseline Verified) - NO AI ASSERTION WITHOUT EVIDENCE ⚠️
+        </div>
         <a
           href="#main-content"
           className="bg-foreground text-background sr-only rounded-md px-3 py-2 text-sm focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50"
