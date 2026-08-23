@@ -12,6 +12,21 @@ from openspec.api.routers import metrics, runs, review, records, attributes, doc
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+app = FastAPI(title="OpenSpec API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://open-spec-two.vercel.app",
+        "https://open-spec.vercel.app",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 from openspec.api.errors import register_exception_handlers
 from openspec.api.routers.documents import router as documents_router
 from openspec.api.routers.records import router as records_router
