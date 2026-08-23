@@ -1,3 +1,4 @@
+
 """`GET /records`, `GET /records/{id}` (docs/api.md §Records) — the first vertical
 slice (docs/13-implementation-blueprint.md step 8). Thin: validation, DI, and
 serialisation only — no business rules live here (docs/05-backend.md §1: "`api/`...
@@ -59,11 +60,12 @@ def list_records(
     tenant_id = get_settings().default_tenant_id
     offset = _decode_cursor(cursor)
     page, next_offset = repo.list_summaries(tenant_id=tenant_id, cursor=offset, limit=limit)
+    
     return {
         "items": [record_summary_from_domain(s).model_dump() for s in page],
-        "next_cursor": _encode_cursor(next_offset) if next_offset is not None else None,
+        "next_cursor": _encode_cursor(next_offset) if next_offset is not None else None
     }
-
+    
 
 @router.get("/records/{record_id}")
 def get_record(
